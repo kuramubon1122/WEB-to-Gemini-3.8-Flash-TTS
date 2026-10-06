@@ -105,6 +105,12 @@
       -webkit-text-security: disc !important;
       text-security: disc !important;
     }
+
+    /* Continuous playback active block highlight */
+    .block-card-playing {
+      border-color: #8b5cf6 !important;
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4), 0 8px 24px -4px rgba(139, 92, 246, 0.25) !important;
+    }
   </style>
 </head>
 <body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased flex flex-col overflow-hidden transition-colors duration-200">
@@ -268,13 +274,38 @@
           </button>
 
           <!-- Batch Generate All Blocks -->
-          <button id="btn-generate-all-blocks" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-xl text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-sm transition-colors">
-            <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button id="btn-generate-all-blocks" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-sm transition-all active:scale-95 disabled:pointer-events-none">
+            <svg class="w-4 h-4 text-purple-600 dark:text-purple-400 icon-batch shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>すべてのブロックを一括生成</span>
+            <svg class="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin icon-batch-spinner shrink-0 hidden" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span class="btn-batch-text">すべてのブロックを一括生成</span>
           </button>
+
+          <!-- Default Model & Voice Settings for New Blocks -->
+          <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+            <span class="text-[11px] text-slate-500 dark:text-slate-400 font-medium px-1 hidden md:inline">初期設定:</span>
+            <select id="default-model-select" class="text-xs px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500" title="新規追加時のデフォルトモデル">
+              <option value="gemini-3.8-flash-tts">3.8 Flash</option>
+              <option value="gemini-3.8-flash-lite-tts">3.8 Flash-Lite</option>
+            </select>
+            <select id="default-voice-select" class="text-xs px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500 max-w-[150px] truncate" title="新規追加時のデフォルトボイス">
+              <!-- Dynamically populated -->
+            </select>
+            <button id="btn-preview-default-voice" type="button" class="flex items-center justify-center p-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-purple-50 dark:hover:bg-purple-950/60 text-purple-600 dark:text-purple-400 transition-colors shadow-xs" title="デフォルトボイスのサンプル音声を試聴">
+              <svg class="icon-speaker w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+              <svg class="icon-spinner w-3.5 h-3.5 animate-spin text-purple-600 hidden" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </button>
+          </div>
 
           <!-- Add Block Button -->
           <button id="btn-add-block-header" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors">
@@ -602,7 +633,6 @@
             type="text" 
             placeholder="AIzaSy..." 
             autocomplete="off" 
-            autocomplete="new-password" 
             data-lpignore="true" 
             data-1p-ignore="true" 
             data-form-type="other"
@@ -783,6 +813,8 @@
     const STORAGE_KEY_CLONED_VOICES = 'gemini_tts_cloned_voices';
     const STORAGE_KEY_SNAPSHOTS = 'gemini_tts_snapshots_v1';
     const STORAGE_KEY_THEME = 'gemini_tts_theme';
+    const STORAGE_KEY_DEFAULT_MODEL = 'gemini_tts_default_model';
+    const STORAGE_KEY_DEFAULT_VOICE = 'gemini_tts_default_voice';
     const MAX_SNAPSHOTS = 100;
 
     // Prebuilt Voices Catalog (Gemini TTS)
@@ -797,14 +829,26 @@
       { id: 'Orpheus', name: 'Orpheus (抒情的・詩的)', gender: 'Male' }
     ];
 
-    // Style presets for prompt hints
+    // Style presets for prompt hints (Expanded to 18 practical presets across Tone, Emotion, and Speed)
     const STYLE_PRESETS = [
-      '明るく元気なナレーション',
-      '落ち着いたニュース解説トーン',
-      '感情を込めたドラマチックな語り',
-      '優しく包み込むようなささやき声',
-      '親しみやすくテンポの良いラジオ風',
-      '緊迫感を持った早口の解説'
+      { text: '明るく元気なナレーション', category: 'トーン・雰囲気' },
+      { text: '落ち着いたニュース解説トーン', category: 'トーン・雰囲気' },
+      { text: '優しく包み込むようなささやき声', category: 'トーン・雰囲気' },
+      { text: '静かで厳かなアナウンス', category: 'トーン・雰囲気' },
+      { text: 'ビジネス向けの知的で洗練された語り', category: 'トーン・雰囲気' },
+      { text: '威厳のある重厚な声', category: 'トーン・雰囲気' },
+      { text: 'クールで無機質なAIアシスタント風', category: 'トーン・雰囲気' },
+      { text: '温もりあふれる親しみやすい対話トーン', category: 'トーン・雰囲気' },
+      { text: '感情を込めたドラマチックな語り', category: '感情表現' },
+      { text: '楽しげで陽気なトーク', category: '感情表現' },
+      { text: '怒りをにじませた強い口調', category: '感情表現' },
+      { text: '悲しみに暮れた消え入るような声', category: '感情表現' },
+      { text: '不安と緊張に震える声', category: '感情表現' },
+      { text: '自信に満ちた力強いプレゼン風', category: '感情表現' },
+      { text: '親しみやすくテンポの良いラジオ風', category: '話速・テンポ' },
+      { text: '緊迫感を持った早口の解説', category: '話速・テンポ' },
+      { text: 'ゆっくりと丁寧な児童書読み聞かせ', category: '話速・テンポ' },
+      { text: 'スピード感ある熱気あふれるスポーツ実況風', category: '話速・テンポ' }
     ];
 
     // Vocal tag presets
@@ -824,6 +868,14 @@
       clonedVoices: [],
       snapshots: [],
       sidebarOpen: true,
+      defaultModel: 'gemini-3.8-flash-tts',
+      defaultVoice: 'prebuilt:Puck',
+      isBatchGenerating: false,
+      activePreviewAudio: null,
+      playlist: {
+        isPlaying: false,
+        currentIndex: -1
+      },
       
       // Voice Replication Modal Transient State
       cloneModal: {
@@ -864,7 +916,7 @@
     }
 
     function formatTime(seconds) {
-      if (isNaN(seconds) || seconds < 0) return '00:00';
+      if (typeof seconds !== 'number' || isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '00:00';
       const m = Math.floor(seconds / 60);
       const s = Math.floor(seconds % 60);
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -1004,6 +1056,10 @@
         const savedSnapshots = localStorage.getItem(STORAGE_KEY_SNAPSHOTS);
         appState.snapshots = savedSnapshots ? JSON.parse(savedSnapshots) : [];
 
+        // Load Default Model and Voice
+        appState.defaultModel = localStorage.getItem(STORAGE_KEY_DEFAULT_MODEL) || 'gemini-3.8-flash-tts';
+        appState.defaultVoice = localStorage.getItem(STORAGE_KEY_DEFAULT_VOICE) || 'prebuilt:Puck';
+
         // If no projects exist, create default project
         if (appState.projects.length === 0) {
           const defaultProject = {
@@ -1019,7 +1075,9 @@
                 text: 'こんにちは！Gemini 3.8 Flash TTS による、高品質で表現力豊かな音声合成の世界へようこそ。',
                 stylePrompt: '明るく親しみやすいトーンで元気に',
                 audioUrl: null,
-                isGenerating: false
+                isGenerating: false,
+                textExpanded: false,
+                styleExpanded: false
               }
             ]
           };
@@ -1037,6 +1095,8 @@
               b.audioUrl = null; // Browser blob URLs expire across reloads
               b.audioElement = null;
               b.isGenerating = false;
+              b.textExpanded = !!b.textExpanded;
+              b.styleExpanded = !!b.styleExpanded;
               if (b.voiceType === 'cloned' && b.voiceId && b.voiceId.startsWith('voice_sim_')) {
                 b.voiceType = 'prebuilt';
                 b.voiceId = 'Puck';
@@ -1053,6 +1113,8 @@
               b.audioUrl = null;
               b.audioElement = null;
               b.isGenerating = false;
+              b.textExpanded = !!b.textExpanded;
+              b.styleExpanded = !!b.styleExpanded;
             });
           }
         });
@@ -1070,11 +1132,13 @@
           createdAt: p.createdAt,
           blocks: (p.blocks || []).map(b => ({
             id: b.id,
-            model: b.model,
-            voiceType: b.voiceType,
-            voiceId: normalizeVoiceId(b.voiceId),
+            model: b.model || 'gemini-3.8-flash-tts',
+            voiceType: b.voiceType || 'prebuilt',
+            voiceId: normalizeVoiceId(b.voiceId) || 'Puck',
             text: b.text || '',
-            stylePrompt: b.stylePrompt || ''
+            stylePrompt: b.stylePrompt || '',
+            textExpanded: !!b.textExpanded,
+            styleExpanded: !!b.styleExpanded
           }))
         }));
         localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(cleanProjects));
@@ -1250,23 +1314,380 @@
 
       appState.clonedVoices.forEach(voice => {
         const item = document.createElement('div');
-        item.className = 'flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700';
+        item.className = 'flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 gap-1';
         item.innerHTML = `
           <div class="truncate flex-1 min-w-0 pr-1">
             <p class="font-medium text-slate-700 dark:text-slate-200 truncate">${escapeHtml(voice.name)}</p>
             <p class="font-mono text-[10px] text-purple-600 dark:text-purple-400 truncate">${escapeHtml(voice.id)}</p>
           </div>
-          <button class="btn-del-voice text-slate-400 hover:text-rose-500 p-1" title="クローン音声を削除" data-voice-id="${voice.id}">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button class="btn-preview-sidebar-voice text-purple-600 dark:text-purple-400 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/50 p-1 rounded" title="このクローン音声を試聴">
+              <svg class="icon-speaker w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+              <svg class="icon-spinner w-3.5 h-3.5 animate-spin text-purple-600 hidden" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </button>
+            <button class="btn-del-voice text-slate-400 hover:text-rose-500 p-1 rounded" title="クローン音声を削除" data-voice-id="${voice.id}">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
         `;
+        const previewBtn = item.querySelector('.btn-preview-sidebar-voice');
+        previewBtn.addEventListener('click', () => {
+          previewVoiceSample('cloned', voice.id, appState.defaultModel || 'gemini-3.8-flash-tts', previewBtn);
+        });
         item.querySelector('.btn-del-voice').addEventListener('click', () => {
           deleteClonedVoice(voice.id);
         });
         container.appendChild(item);
       });
+      renderDefaultVoiceSelect();
+    }
+
+    function renderDefaultVoiceSelect() {
+      const select = document.getElementById('default-voice-select');
+      if (!select) return;
+
+      let html = '';
+      if (appState.clonedVoices.length > 0) {
+        html += '<optgroup label="【クローン音声】">';
+        appState.clonedVoices.forEach(cv => {
+          const normId = normalizeVoiceId(cv.id);
+          const val = `cloned:${normId}`;
+          const isSelected = appState.defaultVoice === val;
+          html += `<option value="${val}" ${isSelected ? 'selected' : ''}>クローン: ${escapeHtml(cv.name)}</option>`;
+        });
+        html += '</optgroup>';
+      }
+
+      html += '<optgroup label="【標準ボイス】">';
+      PREBUILT_VOICES.forEach(pv => {
+        const val = `prebuilt:${pv.id}`;
+        const isSelected = appState.defaultVoice === val;
+        html += `<option value="${val}" ${isSelected ? 'selected' : ''}>${pv.name}</option>`;
+      });
+      html += '</optgroup>';
+
+      select.innerHTML = html;
+
+      if (!select.value && select.options.length > 0) {
+        select.selectedIndex = 0;
+        appState.defaultVoice = select.value;
+        localStorage.setItem(STORAGE_KEY_DEFAULT_VOICE, appState.defaultVoice);
+      }
+    }
+
+    function initDefaultSettingsUI() {
+      const modelSelect = document.getElementById('default-model-select');
+      const voiceSelect = document.getElementById('default-voice-select');
+      
+      if (modelSelect) {
+        modelSelect.value = appState.defaultModel || 'gemini-3.8-flash-tts';
+        modelSelect.addEventListener('change', (e) => {
+          appState.defaultModel = e.target.value;
+          localStorage.setItem(STORAGE_KEY_DEFAULT_MODEL, appState.defaultModel);
+        });
+      }
+
+      renderDefaultVoiceSelect();
+
+      if (voiceSelect) {
+        voiceSelect.addEventListener('change', (e) => {
+          appState.defaultVoice = e.target.value;
+          localStorage.setItem(STORAGE_KEY_DEFAULT_VOICE, appState.defaultVoice);
+        });
+      }
+
+      const previewDefaultVoiceBtn = document.getElementById('btn-preview-default-voice');
+      if (previewDefaultVoiceBtn) {
+        previewDefaultVoiceBtn.addEventListener('click', () => {
+          let voiceType = 'prebuilt';
+          let voiceId = 'Puck';
+          if (appState.defaultVoice) {
+            const parts = appState.defaultVoice.split(':');
+            if (parts[0] === 'cloned') {
+              voiceType = 'cloned';
+              voiceId = parts.slice(1).join(':');
+            } else if (parts[0] === 'prebuilt') {
+              voiceType = 'prebuilt';
+              voiceId = parts[1] || 'Puck';
+            }
+          }
+          previewVoiceSample(voiceType, voiceId, appState.defaultModel || 'gemini-3.8-flash-tts', previewDefaultVoiceBtn);
+        });
+      }
+    }
+
+    // --- Continuous Playlist Playback Logic ---
+    function stopSequentialPlayback() {
+      appState.playlist.isPlaying = false;
+      appState.playlist.currentIndex = -1;
+      document.querySelectorAll('.block-card-playing').forEach(el => {
+        el.classList.remove('block-card-playing');
+      });
+    }
+
+    function startSequentialPlayback(blocks) {
+      const projectBlocks = blocks || ((getCurrentProject() && getCurrentProject().blocks) || []);
+      const playableBlocks = projectBlocks.filter(b => b.audioUrl && b.audioElement instanceof Audio);
+      if (playableBlocks.length === 0) {
+        showToast('再生可能な音声がありません', 'info');
+        return;
+      }
+
+      stopSequentialPlayback();
+      pauseAllAudioPlayers();
+      appState.playlist.isPlaying = true;
+      appState.playlist.currentIndex = 0;
+
+      function playStep(idx) {
+        if (!appState.playlist.isPlaying || idx >= playableBlocks.length) {
+          stopSequentialPlayback();
+          showToast('すべてのブロックの連続再生が完了しました！', 'info');
+          return;
+        }
+
+        appState.playlist.currentIndex = idx;
+        const curBlock = playableBlocks[idx];
+        const cardEl = document.getElementById(`block-${curBlock.id}`);
+
+        document.querySelectorAll('.block-card-playing').forEach(el => {
+          el.classList.remove('block-card-playing');
+        });
+        if (cardEl) {
+          cardEl.classList.add('block-card-playing');
+          cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        pauseAllAudioPlayers();
+        curBlock.audioElement.currentTime = 0;
+
+        const onEnded = () => {
+          curBlock.audioElement.removeEventListener('ended', onEnded);
+          if (appState.playlist.isPlaying) {
+            setTimeout(() => playStep(idx + 1), 350);
+          }
+        };
+        curBlock.audioElement.addEventListener('ended', onEnded, { once: true });
+
+        const p = curBlock.audioElement.play();
+        if (p !== undefined) {
+          p.catch(e => {
+            console.warn('Continuous playback auto-play notice:', e);
+            curBlock.audioElement.removeEventListener('ended', onEnded);
+            if (appState.playlist.isPlaying) {
+              playStep(idx + 1);
+            }
+          });
+        }
+      }
+
+      showToast('全ブロックの連続再生を開始します（1番目のブロックから順に再生）', 'info');
+      playStep(0);
+    }
+
+    // --- Voice Sample Audition Logic ---
+    async function previewVoiceSample(voiceType, voiceId, model, btnEl) {
+      if (!appState.apiKey) {
+        openSettingsModal();
+        showToast('Gemini APIキーを設定してください', 'error');
+        return;
+      }
+
+      const speakerIcon = btnEl.querySelector('.icon-speaker');
+      const spinnerIcon = btnEl.querySelector('.icon-spinner');
+      btnEl.disabled = true;
+      btnEl.classList.add('opacity-75', 'cursor-not-allowed');
+      if (speakerIcon) speakerIcon.classList.add('hidden');
+      if (spinnerIcon) spinnerIcon.classList.remove('hidden');
+
+      try {
+        const sampleText = 'こんにちは。私の声はいかがですか？';
+        const actualModel = model || 'gemini-3.8-flash-tts';
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}:generateContent?key=${encodeURIComponent(appState.apiKey)}`;
+
+        let voiceConfig = {};
+        if (voiceType === 'cloned') {
+          const normId = normalizeVoiceId(voiceId);
+          if (!normId) throw new Error('クローン音声IDが指定されていません');
+          if (normId.startsWith('voice_sim_')) {
+            throw new Error('テスト用の模擬ID（voice_sim_...）は試聴できません。正規のクローン音声を作成してください。');
+          }
+          voiceConfig = { voice: normId };
+        } else {
+          voiceConfig = {
+            prebuiltVoiceConfig: {
+              voiceName: voiceId || 'Puck'
+            }
+          };
+        }
+
+        const body = {
+          contents: [{ role: 'user', parts: [{ text: sampleText }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: voiceConfig }
+          }
+        };
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          const errMsg = errJson.error?.message || `HTTP ${res.status}`;
+          if (voiceType === 'cloned' && (res.status === 403 || res.status === 404 || errMsg.includes('The voice was not found') || errMsg.toLowerCase().includes('billing') || errMsg.toLowerCase().includes('permission'))) {
+            throw new Error(`試聴エラー: ${errMsg}\n※クローン音声のTTS合成にはGoogle AI Studioの従量課金（Paid Tier 1以上）プロジェクトのAPIキーが必要です。`);
+          }
+          throw new Error(`試聴API エラー (${res.status}): ${errMsg}`);
+        }
+
+        const data = await res.json();
+        const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData || p.inline_data);
+        const audioBase64 = part?.inlineData?.data || part?.inline_data?.data;
+        const mimeType = part?.inlineData?.mimeType || part?.inline_data?.mime_type || 'audio/wav';
+
+        if (!audioBase64) throw new Error('APIから音声データが返却されませんでした');
+
+        const byteChars = atob(audioBase64);
+        const byteNumbers = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+        const blob = new Blob([byteNumbers], { type: mimeType });
+        const audioUrl = URL.createObjectURL(blob);
+
+        pauseAllAudioPlayers();
+        stopSequentialPlayback();
+
+        if (appState.activePreviewAudio instanceof Audio) {
+          appState.activePreviewAudio.pause();
+          appState.activePreviewAudio.src = '';
+        }
+        const audio = new Audio(audioUrl);
+        appState.activePreviewAudio = audio;
+        audio.play().catch(e => console.warn('Preview play warning:', e));
+        showToast(`ボイス「${voiceId}」のサンプル音声を再生中`, 'info');
+
+      } catch (err) {
+        console.error('Preview error:', err);
+        showToast(err.message, 'error');
+      } finally {
+        btnEl.disabled = false;
+        btnEl.classList.remove('opacity-75', 'cursor-not-allowed');
+        if (speakerIcon) speakerIcon.classList.remove('hidden');
+        if (spinnerIcon) spinnerIcon.classList.add('hidden');
+      }
+    }
+
+    // --- AI Emotion Tag Auto-Insert (Gemini 3.5 Flash-Lite) ---
+    async function autoTagTextWithAI(block, cardEl) {
+      if (!appState.apiKey) {
+        openSettingsModal();
+        showToast('Gemini APIキーを設定してください', 'error');
+        return;
+      }
+
+      if (!block.text || block.text.trim().length === 0) {
+        showToast('感情タグを付与する文章を入力してください', 'info');
+        return;
+      }
+
+      const btn = cardEl.querySelector('.btn-ai-auto-tag');
+      const sparkleIcon = btn.querySelector('.icon-ai-sparkle');
+      const spinnerIcon = btn.querySelector('.icon-ai-spinner');
+      const labelSpan = btn.querySelector('.label-ai-tag');
+      const textarea = cardEl.querySelector('.block-text-input');
+      const charCountEl = cardEl.querySelector('.block-text-charcount');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+      if (sparkleIcon) sparkleIcon.classList.add('hidden');
+      if (spinnerIcon) spinnerIcon.classList.remove('hidden');
+      if (labelSpan) labelSpan.textContent = 'タグ解析中...';
+
+      try {
+        const textModel = 'gemini-3.5-flash-lite';
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${textModel}:generateContent?key=${encodeURIComponent(appState.apiKey)}`;
+
+        const systemInstruction = '入力されたテキストの文脈を解析し、適切な箇所に <laugh>, <short pause>, <breath>, <sigh> などの感情表現タグを自然に挿入して、テキストのみを返却してください。マークダウンの記法やコードブロック（```）、余計な解説などは一切含めず、タグ付け後の本文のみを出力してください。';
+
+        const payload = {
+          system_instruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: block.text }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.6,
+            maxOutputTokens: 2048
+          }
+        };
+
+        let res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        // Fallback to gemini-1.5-flash if gemini-3.5-flash-lite responds 404
+        if (res.status === 404) {
+          const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(appState.apiKey)}`;
+          res = await fetch(fallbackEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error(errJson.error?.message || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const candidate = data.candidates?.[0];
+        let resultText = candidate?.content?.parts?.map(p => p.text || '').join('');
+
+        if (!resultText) {
+          if (candidate?.finishReason) {
+            throw new Error(`テキスト生成が完了しませんでした (${candidate.finishReason})`);
+          }
+          throw new Error('APIからタグ付きテキストが返却されませんでした');
+        }
+
+        // Clean code fences if present
+        resultText = resultText.trim();
+        if (resultText.startsWith('```') && resultText.endsWith('```')) {
+          resultText = resultText.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+        }
+
+        block.text = resultText;
+        if (textarea) textarea.value = resultText;
+        if (charCountEl) charCountEl.textContent = `${resultText.length}文字`;
+        saveProjectsToStorage();
+        showToast('AI（Gemini 3.5 Flash-Lite）による感情タグの自動付与が完了しました！', 'success');
+
+      } catch (err) {
+        console.error('AI Auto-tag Error:', err);
+        showToast(`AI自動タグ付けエラー: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        if (sparkleIcon) sparkleIcon.classList.remove('hidden');
+        if (spinnerIcon) spinnerIcon.classList.add('hidden');
+        if (labelSpan) labelSpan.textContent = 'AIで自動タグ付け（Gemini 3.5 Flash-Lite）';
+      }
     }
 
     function renderCurrentProjectView() {
@@ -1309,19 +1730,29 @@
       // Build Voice selection options
       let voiceOptionsHtml = '';
       
-      // 1. Cloned Voices Group
+      // 1. Cloned Voices Group (Explicit Flash and Flash-Lite options)
       if (appState.clonedVoices.length > 0 || block.voiceType === 'cloned') {
-        voiceOptionsHtml += '<optgroup label="【登録済みクローン音声】">';
-        let matchedCloned = false;
+        voiceOptionsHtml += '<optgroup label="【登録済みクローン音声 (Gemini 3.8 Flash)】">';
         appState.clonedVoices.forEach(cv => {
           const normCvId = normalizeVoiceId(cv.id);
-          const isSelected = block.voiceType === 'cloned' && normalizeVoiceId(block.voiceId) === normCvId;
-          if (isSelected) matchedCloned = true;
-          voiceOptionsHtml += `<option value="cloned:${normCvId}" ${isSelected ? 'selected' : ''}>クローン: ${escapeHtml(cv.name)} (${normCvId})</option>`;
+          const isSelected = block.voiceType === 'cloned' && normalizeVoiceId(block.voiceId) === normCvId && (block.model !== 'gemini-3.8-flash-lite-tts');
+          voiceOptionsHtml += `<option value="cloned:gemini-3.8-flash-tts:${normCvId}" ${isSelected ? 'selected' : ''}>[Flash] クローン: ${escapeHtml(cv.name)} (${normCvId})</option>`;
         });
-        if (block.voiceType === 'cloned' && !matchedCloned && block.voiceId) {
+        if (block.voiceType === 'cloned' && !appState.clonedVoices.some(cv => normalizeVoiceId(cv.id) === normalizeVoiceId(block.voiceId)) && block.voiceId) {
           const normCvId = normalizeVoiceId(block.voiceId);
-          voiceOptionsHtml += `<option value="cloned:${normCvId}" selected>クローン: ${escapeHtml(normCvId)}</option>`;
+          voiceOptionsHtml += `<option value="cloned:gemini-3.8-flash-tts:${normCvId}" ${block.model !== 'gemini-3.8-flash-lite-tts' ? 'selected' : ''}>[Flash] クローン: ${escapeHtml(normCvId)}</option>`;
+        }
+        voiceOptionsHtml += '</optgroup>';
+
+        voiceOptionsHtml += '<optgroup label="【登録済みクローン音声 (Gemini 3.8 Flash-Lite)】">';
+        appState.clonedVoices.forEach(cv => {
+          const normCvId = normalizeVoiceId(cv.id);
+          const isSelected = block.voiceType === 'cloned' && normalizeVoiceId(block.voiceId) === normCvId && block.model === 'gemini-3.8-flash-lite-tts';
+          voiceOptionsHtml += `<option value="cloned:gemini-3.8-flash-lite-tts:${normCvId}" ${isSelected ? 'selected' : ''}>[Flash-Lite] クローン: ${escapeHtml(cv.name)} (${normCvId})</option>`;
+        });
+        if (block.voiceType === 'cloned' && !appState.clonedVoices.some(cv => normalizeVoiceId(cv.id) === normalizeVoiceId(block.voiceId)) && block.voiceId) {
+          const normCvId = normalizeVoiceId(block.voiceId);
+          voiceOptionsHtml += `<option value="cloned:gemini-3.8-flash-lite-tts:${normCvId}" ${block.model === 'gemini-3.8-flash-lite-tts' ? 'selected' : ''}>[Flash-Lite] クローン: ${escapeHtml(normCvId)}</option>`;
         }
         voiceOptionsHtml += '</optgroup>';
       }
@@ -1329,7 +1760,7 @@
       // 2. Prebuilt Voices Group (Flash TTS)
       voiceOptionsHtml += '<optgroup label="【Gemini 3.8 Flash TTS 標準ボイス】">';
       PREBUILT_VOICES.forEach(pv => {
-        const isSelected = block.voiceType === 'prebuilt' && block.voiceId === pv.id && (block.model === 'gemini-3.8-flash-tts' || !block.model);
+        const isSelected = block.voiceType === 'prebuilt' && block.voiceId === pv.id && (block.model !== 'gemini-3.8-flash-lite-tts');
         voiceOptionsHtml += `<option value="prebuilt:gemini-3.8-flash-tts:${pv.id}" ${isSelected ? 'selected' : ''}>[Flash] ${pv.name}</option>`;
       });
       voiceOptionsHtml += '</optgroup>';
@@ -1345,23 +1776,35 @@
       card.innerHTML = `
         <!-- Block Header: Voice Selector & Model Indicator -->
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div class="flex items-center gap-2.5 flex-1 min-w-[240px]">
+          <div class="flex items-center gap-2 flex-1 min-w-[260px] flex-wrap sm:flex-nowrap">
             <span class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0">
               #${index + 1}
             </span>
 
             <!-- Voice Selection Dropdown -->
-            <div class="flex-1 max-w-md">
+            <div class="flex-1 min-w-[160px] max-w-md">
               <label class="sr-only">使用するボイス選択</label>
               <select class="block-voice-select w-full text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:outline-none">
                 ${voiceOptionsHtml}
               </select>
             </div>
 
-            <!-- Model Badge -->
-            <span class="text-[11px] px-2 py-0.5 rounded-full font-medium ${block.model === 'gemini-3.8-flash-lite-tts' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800'}">
-              ${block.model === 'gemini-3.8-flash-lite-tts' ? '3.8 Flash-Lite' : '3.8 Flash'}
-            </span>
+            <!-- Voice Sample Audition Button -->
+            <button type="button" class="btn-preview-voice flex items-center justify-center p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/60 hover:border-purple-300 dark:hover:border-purple-600 text-purple-600 dark:text-purple-400 transition-colors shadow-xs shrink-0" title="このボイスのサンプル音声を試聴">
+              <svg class="icon-speaker w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+              <svg class="icon-spinner w-4 h-4 animate-spin text-purple-600 hidden" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </button>
+
+            <!-- Model Switcher Dropdown (Clear Model Selection for Cloned & Prebuilt) -->
+            <select class="block-model-select text-[11px] font-bold px-2 py-1 rounded-xl border transition-colors shrink-0 ${block.model === 'gemini-3.8-flash-lite-tts' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-200 border-amber-300 dark:border-amber-700' : 'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-200 border-purple-300 dark:border-purple-700'}" title="TTS合成モデルの選択">
+              <option value="gemini-3.8-flash-tts" ${block.model !== 'gemini-3.8-flash-lite-tts' ? 'selected' : ''}>3.8 Flash</option>
+              <option value="gemini-3.8-flash-lite-tts" ${block.model === 'gemini-3.8-flash-lite-tts' ? 'selected' : ''}>3.8 Flash-Lite</option>
+            </select>
           </div>
 
           <!-- Block Actions (Duplicate & Delete) -->
@@ -1381,40 +1824,98 @@
 
         <!-- 1. Text Input: 読み上げる文章 (Real-time auto-persistence) -->
         <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="text-xs font-bold text-slate-700 dark:text-slate-300">
-              読み上げる文章
-            </label>
-            <div class="flex items-center gap-1 flex-wrap">
-              <span class="text-[10px] text-slate-400 mr-1">タグ挿入:</span>
+          <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                読み上げる文章
+              </label>
+              <!-- Expand / Collapse Button -->
+              <button type="button" class="btn-toggle-expand-text flex items-center gap-1 text-[11px] font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 px-1.5 py-0.5 rounded-md hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors" title="入力欄の高さを展開 / 縮小">
+                <svg class="icon-expand-text w-3 h-3 transition-transform ${block.textExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+                <span class="label-expand-text">${block.textExpanded ? '縮小' : '展開'}</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- AI Auto Tag Button (Gemini 3.5 Flash-Lite) -->
+              <button type="button" class="btn-ai-auto-tag flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 hover:bg-purple-100 dark:hover:bg-purple-900/80 border border-purple-200 dark:border-purple-800 transition-all shadow-xs">
+                <svg class="icon-ai-sparkle w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                </svg>
+                <svg class="icon-ai-spinner w-3.5 h-3.5 animate-spin text-purple-600 dark:text-purple-400 shrink-0 hidden" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span class="label-ai-tag">AIで自動タグ付け（Gemini 3.5 Flash-Lite）</span>
+              </button>
+
+              <span class="text-[10px] text-slate-400 mr-0.5">タグ:</span>
               ${VOCAL_TAGS.map(t => `<button type="button" class="btn-insert-tag text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors" data-tag="${t.tag}">${t.label}</button>`).join('')}
             </div>
           </div>
-          <textarea class="block-text-input w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all placeholder:text-slate-400" rows="3" placeholder="読み上げるテキストを入力してください。インラインタグ <short pause>, <laugh> も利用可能です。">${escapeHtml(block.text || '')}</textarea>
+
+          <div class="relative">
+            <textarea class="block-text-input w-full px-3.5 py-2.5 pb-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all placeholder:text-slate-400 resize-y" rows="${block.textExpanded ? '8' : '3'}" placeholder="読み上げるテキストを入力してください。インラインタグ <short pause>, <laugh> も利用可能です。">${escapeHtml(block.text || '')}</textarea>
+            <div class="absolute bottom-2 right-3 pointer-events-none">
+              <span class="block-text-charcount font-mono text-[11px] text-slate-400 dark:text-slate-500 bg-white/80 dark:bg-slate-800/80 px-1.5 py-0.5 rounded shadow-xs">${(block.text || '').length}文字</span>
+            </div>
+          </div>
         </div>
 
         <!-- 2. Style Prompt Input: 読み上げ方のイメージ（プロンプト） (Real-time auto-persistence) -->
         <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <span>読み上げ方のイメージ（プロンプト）</span>
-              <span class="font-normal text-[11px] text-slate-400">speech_metadata.style</span>
-            </label>
-            <div class="flex items-center gap-1 flex-wrap">
-              <span class="text-[10px] text-slate-400 mr-1">プリセット:</span>
-              ${STYLE_PRESETS.slice(0, 3).map(p => `<button type="button" class="btn-preset-style text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors" data-preset="${p}">${p}</button>`).join('')}
+          <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <span>読み上げ方のイメージ（プロンプト）</span>
+                <span class="font-normal text-[11px] text-slate-400">speech_metadata.style</span>
+              </label>
+              <!-- Expand / Collapse Button -->
+              <button type="button" class="btn-toggle-expand-style flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 px-1.5 py-0.5 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors" title="プロンプト欄を展開 / 縮小">
+                <svg class="icon-expand-style w-3 h-3 transition-transform ${block.styleExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+                <span class="label-expand-style">${block.styleExpanded ? '縮小' : '展開'}</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[10px] text-slate-400">プリセット:</span>
+              ${STYLE_PRESETS.slice(0, 3).map(p => `<button type="button" class="btn-preset-style text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors" data-preset="${p.text}">${p.text}</button>`).join('')}
+
+              <!-- 18 Presets Dropdown -->
+              <select class="select-preset-more text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <option value="">定型文（全${STYLE_PRESETS.length}種）▼</option>
+                ${['トーン・雰囲気', '感情表現', '話速・テンポ'].map(cat => `
+                  <optgroup label="【${cat}】">
+                    ${STYLE_PRESETS.filter(p => p.category === cat).map(p => `<option value="${escapeHtml(p.text)}">${escapeHtml(p.text)}</option>`).join('')}
+                  </optgroup>
+                `).join('')}
+              </select>
             </div>
           </div>
-          <input type="text" class="block-style-input w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder:text-slate-400" placeholder="例: 明るく元気なナレーション、落ち着いたトーン、ささやくように" value="${escapeHtml(block.stylePrompt || '')}">
+
+          <div class="relative">
+            <textarea class="block-style-input w-full px-3.5 py-2 ${block.styleExpanded ? 'pb-6' : 'pr-16'} rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder:text-slate-400 resize-y" rows="${block.styleExpanded ? '3' : '1'}" placeholder="例: 明るく元気なナレーション、落ち着いたトーン、ささやくように">${escapeHtml(block.stylePrompt || '')}</textarea>
+            <div class="block-style-charcount-wrapper absolute ${block.styleExpanded ? 'bottom-2 right-3' : 'top-1/2 -translate-y-1/2 right-3'} pointer-events-none">
+              <span class="block-style-charcount font-mono text-[11px] text-slate-400 dark:text-slate-500 bg-white/80 dark:bg-slate-800/80 px-1.5 py-0.5 rounded shadow-xs">${(block.stylePrompt || '').length}文字</span>
+            </div>
+          </div>
         </div>
 
         <!-- 3. Generation Button & Player -->
         <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <!-- Generate Audio Button -->
+          <!-- Generate Audio Button with Spinner -->
           <button class="btn-generate-audio flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md shadow-purple-500/20 active:scale-95 transition-all shrink-0">
-            <svg class="w-4 h-4 icon-generate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 icon-generate ${block.isGenerating ? 'hidden' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <svg class="w-4 h-4 icon-generate-spinner animate-spin ${block.isGenerating ? '' : 'hidden'}" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
             </svg>
             <span class="btn-generate-text">${block.isGenerating ? '生成中...' : '音声生成'}</span>
           </button>
@@ -1438,33 +1939,113 @@
 
       // Attach Event Listeners to this Block Element
       const voiceSelect = card.querySelector('.block-voice-select');
+      const modelSelect = card.querySelector('.block-model-select');
+      const previewBtn = card.querySelector('.btn-preview-voice');
+      const aiTagBtn = card.querySelector('.btn-ai-auto-tag');
+      const textInput = card.querySelector('.block-text-input');
+      const textCharCount = card.querySelector('.block-text-charcount');
+      const styleInput = card.querySelector('.block-style-input');
+      const styleCharCount = card.querySelector('.block-style-charcount');
+      const expandTextBtn = card.querySelector('.btn-toggle-expand-text');
+      const expandStyleBtn = card.querySelector('.btn-toggle-expand-style');
+      const morePresetsSelect = card.querySelector('.select-preset-more');
+
+      function updateModelSelectStyle(selectEl, model) {
+        if (!selectEl) return;
+        if (model === 'gemini-3.8-flash-lite-tts') {
+          selectEl.className = 'block-model-select text-[11px] font-bold px-2 py-1 rounded-xl border transition-colors shrink-0 bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-200 border-amber-300 dark:border-amber-700';
+        } else {
+          selectEl.className = 'block-model-select text-[11px] font-bold px-2 py-1 rounded-xl border transition-colors shrink-0 bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-200 border-purple-300 dark:border-purple-700';
+        }
+      }
+
       voiceSelect.addEventListener('change', (e) => {
         const val = e.target.value;
         const parts = val.split(':');
         if (parts[0] === 'cloned') {
           block.voiceType = 'cloned';
-          block.voiceId = parts.slice(1).join(':');
-          if (!block.model) block.model = 'gemini-3.8-flash-tts';
+          block.model = parts[1] || 'gemini-3.8-flash-tts';
+          block.voiceId = parts.slice(2).join(':');
         } else if (parts[0] === 'prebuilt') {
           block.voiceType = 'prebuilt';
           block.model = parts[1] || 'gemini-3.8-flash-tts';
           block.voiceId = parts[2] || 'Puck';
         }
+        if (modelSelect) {
+          modelSelect.value = block.model;
+          updateModelSelectStyle(modelSelect, block.model);
+        }
         saveProjectsToStorage();
-        renderTTSBlocks();
       });
 
-      // Keystroke-level auto-persistence for text
-      const textInput = card.querySelector('.block-text-input');
+      modelSelect.addEventListener('change', (e) => {
+        block.model = e.target.value;
+        updateModelSelectStyle(modelSelect, block.model);
+        const prefix = block.voiceType === 'cloned' ? 'cloned' : 'prebuilt';
+        const targetVal = `${prefix}:${block.model}:${block.voiceId}`;
+        for (let i = 0; i < voiceSelect.options.length; i++) {
+          if (voiceSelect.options[i].value === targetVal) {
+            voiceSelect.value = targetVal;
+            break;
+          }
+        }
+        saveProjectsToStorage();
+      });
+
+      previewBtn.addEventListener('click', () => {
+        previewVoiceSample(block.voiceType, block.voiceId, block.model, previewBtn);
+      });
+
+      aiTagBtn.addEventListener('click', () => {
+        autoTagTextWithAI(block, card);
+      });
+
+      expandTextBtn.addEventListener('click', () => {
+        block.textExpanded = !block.textExpanded;
+        textInput.rows = block.textExpanded ? 8 : 3;
+        const icon = expandTextBtn.querySelector('.icon-expand-text');
+        const label = expandTextBtn.querySelector('.label-expand-text');
+        if (icon) icon.classList.toggle('rotate-180', block.textExpanded);
+        if (label) label.textContent = block.textExpanded ? '縮小' : '展開';
+        saveProjectsToStorage();
+      });
+
+      expandStyleBtn.addEventListener('click', () => {
+        block.styleExpanded = !block.styleExpanded;
+        styleInput.rows = block.styleExpanded ? 3 : 1;
+        if (block.styleExpanded) {
+          styleInput.classList.remove('pr-16');
+          styleInput.classList.add('pb-6');
+        } else {
+          styleInput.classList.remove('pb-6');
+          styleInput.classList.add('pr-16');
+        }
+        const icon = expandStyleBtn.querySelector('.icon-expand-style');
+        const label = expandStyleBtn.querySelector('.label-expand-style');
+        if (icon) icon.classList.toggle('rotate-180', block.styleExpanded);
+        if (label) label.textContent = block.styleExpanded ? '縮小' : '展開';
+        const charWrapper = card.querySelector('.block-style-charcount-wrapper');
+        if (charWrapper) {
+          if (block.styleExpanded) {
+            charWrapper.className = 'block-style-charcount-wrapper absolute bottom-2 right-3 pointer-events-none';
+          } else {
+            charWrapper.className = 'block-style-charcount-wrapper absolute top-1/2 -translate-y-1/2 right-3 pointer-events-none';
+          }
+        }
+        saveProjectsToStorage();
+      });
+
+      // Keystroke-level auto-persistence for text & real-time character count
       textInput.addEventListener('input', (e) => {
         block.text = e.target.value;
+        if (textCharCount) textCharCount.textContent = `${block.text.length}文字`;
         saveProjectsToStorage();
       });
 
-      // Keystroke-level auto-persistence for style prompt
-      const styleInput = card.querySelector('.block-style-input');
+      // Keystroke-level auto-persistence for style prompt & real-time character count
       styleInput.addEventListener('input', (e) => {
         block.stylePrompt = e.target.value;
+        if (styleCharCount) styleCharCount.textContent = `${block.stylePrompt.length}文字`;
         saveProjectsToStorage();
       });
 
@@ -1472,24 +2053,38 @@
       card.querySelectorAll('.btn-insert-tag').forEach(btn => {
         btn.addEventListener('click', () => {
           const tag = btn.dataset.tag;
-          const cursorPos = textInput.selectionStart;
+          const cursorPos = textInput.selectionStart ?? textInput.value.length;
           const textBefore = textInput.value.substring(0, cursorPos);
-          const textAfter = textInput.value.substring(textInput.selectionEnd);
-          textInput.value = textBefore + ' ' + tag + ' ' + textAfter;
+          const textAfter = textInput.value.substring(textInput.selectionEnd ?? cursorPos);
+          textInput.value = textBefore + (textBefore.endsWith(' ') || textBefore.length === 0 ? '' : ' ') + tag + ' ' + textAfter;
           block.text = textInput.value;
+          if (textCharCount) textCharCount.textContent = `${block.text.length}文字`;
           saveProjectsToStorage();
           textInput.focus();
         });
       });
 
-      // Style Preset Buttons
+      // Style Preset Buttons (Top 3 quick chips)
       card.querySelectorAll('.btn-preset-style').forEach(btn => {
         btn.addEventListener('click', () => {
           styleInput.value = btn.dataset.preset;
           block.stylePrompt = styleInput.value;
+          if (styleCharCount) styleCharCount.textContent = `${block.stylePrompt.length}文字`;
           saveProjectsToStorage();
         });
       });
+
+      // Style Preset Dropdown (All 18 presets)
+      if (morePresetsSelect) {
+        morePresetsSelect.addEventListener('change', (e) => {
+          if (!e.target.value) return;
+          styleInput.value = e.target.value;
+          block.stylePrompt = e.target.value;
+          if (styleCharCount) styleCharCount.textContent = `${block.stylePrompt.length}文字`;
+          saveProjectsToStorage();
+          e.target.value = '';
+        });
+      }
 
       // Duplicate & Delete Block Buttons
       card.querySelector('.btn-duplicate-block').addEventListener('click', () => {
@@ -1503,7 +2098,7 @@
       // Audio Generation Trigger
       const generateBtn = card.querySelector('.btn-generate-audio');
       generateBtn.addEventListener('click', () => {
-        generateTTSForBlock(block, card);
+        generateTTSForBlock(block, card, true);
       });
 
       // Audio Player Controller for Block
@@ -1520,6 +2115,9 @@
           }
         });
       });
+      if (appState.activePreviewAudio instanceof Audio && !appState.activePreviewAudio.paused) {
+        appState.activePreviewAudio.pause();
+      }
       if (appState.cloneModal.training.audioEl instanceof Audio && !appState.cloneModal.training.audioEl.paused) {
         appState.cloneModal.training.audioEl.pause();
       }
@@ -1545,13 +2143,38 @@
       const audio = new Audio();
       block.audioElement = audio;
 
+      let isSeeking = false;
+
+      // Reset seekbar and time display safely
+      seekbar.value = 0;
+      timeDisplay.textContent = '00:00 / 00:00';
+      playIcon.classList.remove('hidden');
+      pauseIcon.classList.add('hidden');
+
+      function updateDurationDisplay() {
+        if (typeof audio.duration === 'number' && isFinite(audio.duration) && audio.duration > 0) {
+          const cur = (typeof audio.currentTime === 'number' && isFinite(audio.currentTime)) ? audio.currentTime : 0;
+          timeDisplay.textContent = `${formatTime(cur)} / ${formatTime(audio.duration)}`;
+        } else {
+          timeDisplay.textContent = `${formatTime(audio.currentTime || 0)} / 00:00`;
+        }
+      }
+
       if (block.audioUrl) {
         audio.src = block.audioUrl;
         downloadBtn.href = block.audioUrl;
+        if (audio.readyState >= 1) {
+          updateDurationDisplay();
+        } else {
+          audio.load();
+        }
       }
 
       playBtn.addEventListener('click', () => {
         if (!audio.src) return;
+        // User manual play/pause stops playlist mode
+        stopSequentialPlayback();
+
         if (audio.paused) {
           pauseAllAudioPlayers();
           audio.play().catch(e => console.warn('Audio play error:', e));
@@ -1570,26 +2193,61 @@
         pauseIcon.classList.add('hidden');
       });
 
+      audio.addEventListener('loadedmetadata', updateDurationDisplay);
+      audio.addEventListener('durationchange', updateDurationDisplay);
+
       audio.addEventListener('timeupdate', () => {
-        if (!isNaN(audio.duration) && audio.duration > 0) {
+        if (isSeeking) return;
+        if (typeof audio.duration === 'number' && isFinite(audio.duration) && audio.duration > 0) {
           seekbar.value = (audio.currentTime / audio.duration) * 100;
           timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        } else {
+          seekbar.value = 0;
+          timeDisplay.textContent = `${formatTime(audio.currentTime || 0)} / 00:00`;
         }
-      });
-
-      audio.addEventListener('loadedmetadata', () => {
-        timeDisplay.textContent = `00:00 / ${formatTime(audio.duration)}`;
       });
 
       audio.addEventListener('ended', () => {
         playIcon.classList.remove('hidden');
         pauseIcon.classList.add('hidden');
+        audio.currentTime = 0;
         seekbar.value = 0;
+        updateDurationDisplay();
       });
 
+      audio.addEventListener('error', () => {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        seekbar.value = 0;
+        timeDisplay.textContent = '00:00 / 00:00';
+      });
+
+      seekbar.addEventListener('mousedown', () => { isSeeking = true; });
+      seekbar.addEventListener('touchstart', () => { isSeeking = true; }, { passive: true });
+
       seekbar.addEventListener('input', () => {
-        if (!isNaN(audio.duration)) {
-          audio.currentTime = (seekbar.value / 100) * audio.duration;
+        isSeeking = true;
+        if (typeof audio.duration === 'number' && isFinite(audio.duration) && audio.duration > 0) {
+          const targetTime = (parseFloat(seekbar.value) / 100) * audio.duration;
+          timeDisplay.textContent = `${formatTime(targetTime)} / ${formatTime(audio.duration)}`;
+        }
+      });
+
+      seekbar.addEventListener('change', () => {
+        if (typeof audio.duration === 'number' && isFinite(audio.duration) && audio.duration > 0) {
+          audio.currentTime = (parseFloat(seekbar.value) / 100) * audio.duration;
+          updateDurationDisplay();
+        }
+        isSeeking = false;
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isSeeking) {
+          if (typeof audio.duration === 'number' && isFinite(audio.duration) && audio.duration > 0) {
+            audio.currentTime = (parseFloat(seekbar.value) / 100) * audio.duration;
+            updateDurationDisplay();
+          }
+          isSeeking = false;
         }
       });
     }
@@ -1597,15 +2255,32 @@
     // --- Block Manipulation ---
     function addBlock() {
       const project = getCurrentProject();
+      const defaultModel = appState.defaultModel || 'gemini-3.8-flash-tts';
+      let defaultVoiceType = 'prebuilt';
+      let defaultVoiceId = 'Puck';
+
+      if (appState.defaultVoice) {
+        const parts = appState.defaultVoice.split(':');
+        if (parts[0] === 'cloned') {
+          defaultVoiceType = 'cloned';
+          defaultVoiceId = parts.slice(1).join(':');
+        } else if (parts[0] === 'prebuilt') {
+          defaultVoiceType = 'prebuilt';
+          defaultVoiceId = parts[1] || 'Puck';
+        }
+      }
+
       const newBlock = {
         id: generateUniqueId('blk'),
-        model: 'gemini-3.8-flash-tts',
-        voiceType: 'prebuilt',
-        voiceId: 'Puck',
+        model: defaultModel,
+        voiceType: defaultVoiceType,
+        voiceId: normalizeVoiceId(defaultVoiceId),
         text: '',
         stylePrompt: '',
         audioUrl: null,
-        isGenerating: false
+        isGenerating: false,
+        textExpanded: false,
+        styleExpanded: false
       };
       project.blocks.push(newBlock);
       saveProjectsToStorage();
@@ -1621,6 +2296,7 @@
       const project = getCurrentProject();
       const idx = project.blocks.findIndex(b => b.id === blockId);
       if (idx !== -1) {
+        stopSequentialPlayback();
         const source = project.blocks[idx];
         const copy = {
           id: generateUniqueId('blk'),
@@ -1629,6 +2305,8 @@
           voiceId: source.voiceId || 'Puck',
           text: source.text || '',
           stylePrompt: source.stylePrompt || '',
+          textExpanded: !!source.textExpanded,
+          styleExpanded: !!source.styleExpanded,
           audioUrl: null,
           audioElement: null,
           isGenerating: false
@@ -1645,6 +2323,14 @@
         showToast('最低1つのブロックが必要です', 'info');
         return;
       }
+      const blk = project.blocks.find(b => b.id === blockId);
+      if (blk && blk.audioElement instanceof Audio) {
+        try {
+          blk.audioElement.pause();
+          blk.audioElement.src = '';
+        } catch (_) {}
+      }
+      stopSequentialPlayback();
       project.blocks = project.blocks.filter(b => b.id !== blockId);
       saveProjectsToStorage();
       renderTTSBlocks();
@@ -1652,6 +2338,24 @@
 
     // --- Project Operations ---
     function createNewProject() {
+      stopSequentialPlayback();
+      pauseAllAudioPlayers();
+
+      const defaultModel = appState.defaultModel || 'gemini-3.8-flash-tts';
+      let defaultVoiceType = 'prebuilt';
+      let defaultVoiceId = 'Puck';
+
+      if (appState.defaultVoice) {
+        const parts = appState.defaultVoice.split(':');
+        if (parts[0] === 'cloned') {
+          defaultVoiceType = 'cloned';
+          defaultVoiceId = parts.slice(1).join(':');
+        } else if (parts[0] === 'prebuilt') {
+          defaultVoiceType = 'prebuilt';
+          defaultVoiceId = parts[1] || 'Puck';
+        }
+      }
+
       const newProject = {
         id: generateUniqueId('proj'),
         name: `プロジェクト ${appState.projects.length + 1}`,
@@ -1659,13 +2363,15 @@
         blocks: [
           {
             id: generateUniqueId('blk'),
-            model: 'gemini-3.8-flash-tts',
-            voiceType: 'prebuilt',
-            voiceId: 'Puck',
+            model: defaultModel,
+            voiceType: defaultVoiceType,
+            voiceId: normalizeVoiceId(defaultVoiceId),
             text: '',
             stylePrompt: '',
             audioUrl: null,
-            isGenerating: false
+            isGenerating: false,
+            textExpanded: false,
+            styleExpanded: false
           }
         ]
       };
@@ -1678,6 +2384,8 @@
     }
 
     function switchProject(projectId) {
+      stopSequentialPlayback();
+      pauseAllAudioPlayers();
       appState.currentProjectId = projectId;
       saveProjectsToStorage();
       renderSidebarProjects();
@@ -1690,6 +2398,9 @@
         return;
       }
       if (!confirm('このプロジェクトを削除しますか？')) return;
+
+      stopSequentialPlayback();
+      pauseAllAudioPlayers();
 
       appState.projects = appState.projects.filter(p => p.id !== projectId);
       if (appState.currentProjectId === projectId) {
@@ -1773,6 +2484,8 @@
         voiceId: normalizeVoiceId(b.voiceId) || 'Puck',
         text: b.text || '',
         stylePrompt: b.stylePrompt || '',
+        textExpanded: !!b.textExpanded,
+        styleExpanded: !!b.styleExpanded,
         audioUrl: null,
         isGenerating: false
       }));
@@ -1801,6 +2514,9 @@
       const ok = confirm(`保存済みプロジェクト「${snap.name}」を画面に復元・適用しますか？\n\n※現在の画面内に入力されている文章、プロンプト、ボイス設定はすべて上書きされます。`);
       if (!ok) return;
 
+      stopSequentialPlayback();
+      pauseAllAudioPlayers();
+
       let cur = getCurrentProject();
       if (!cur) {
         cur = {
@@ -1821,6 +2537,8 @@
         voiceId: normalizeVoiceId(b.voiceId) || 'Puck',
         text: b.text || '',
         stylePrompt: b.stylePrompt || '',
+        textExpanded: !!b.textExpanded,
+        styleExpanded: !!b.styleExpanded,
         audioUrl: null,
         audioElement: null,
         isGenerating: false
@@ -1846,7 +2564,9 @@
     }
 
     // --- Gemini 3.8 Flash TTS Generation API Call ---
-    async function generateTTSForBlock(block, cardEl) {
+    async function generateTTSForBlock(block, cardEl, autoPlay = true) {
+      if (block.isGenerating) return;
+      if (appState.isBatchGenerating && autoPlay) return;
       if (!appState.apiKey) {
         openSettingsModal();
         showToast('Gemini APIキーを設定してください', 'error');
@@ -1858,13 +2578,20 @@
       }
 
       const generateBtn = cardEl.querySelector('.btn-generate-audio');
+      const generateIcon = cardEl.querySelector('.icon-generate');
+      const spinnerIcon = cardEl.querySelector('.icon-generate-spinner');
       const generateText = cardEl.querySelector('.btn-generate-text');
       const playerContainer = cardEl.querySelector('.block-player-container');
       const downloadBtn = cardEl.querySelector('.btn-download-block');
+      const seekbar = cardEl.querySelector('.block-seekbar');
+      const timeDisplay = cardEl.querySelector('.block-time-display');
 
       block.isGenerating = true;
       generateBtn.disabled = true;
-      generateText.textContent = '生成中...';
+      generateBtn.classList.add('opacity-75', 'cursor-not-allowed');
+      if (generateIcon) generateIcon.classList.add('hidden');
+      if (spinnerIcon) spinnerIcon.classList.remove('hidden');
+      if (generateText) generateText.textContent = '生成中...';
 
       try {
         const model = block.model || 'gemini-3.8-flash-tts';
@@ -1951,22 +2678,43 @@
         block.audioUrl = audioUrl;
         saveProjectsToStorage();
 
-        // Update player UI
+        // Update player UI and reset seekbar state
         if (!(block.audioElement instanceof Audio)) {
-          initBlockAudioPlayer(card, block);
+          initBlockAudioPlayer(cardEl, block);
         }
+        block.audioElement.pause();
         block.audioElement.src = audioUrl;
-        downloadBtn.href = audioUrl;
-        playerContainer.classList.remove('hidden');
+        block.audioElement.currentTime = 0;
+        if (seekbar) seekbar.value = 0;
+        if (timeDisplay) timeDisplay.textContent = '00:00 / 00:00';
+        if (downloadBtn) downloadBtn.href = audioUrl;
+        if (playerContainer) playerContainer.classList.remove('hidden');
+        block.audioElement.load();
 
         showToast('音声合成が完了しました！', 'success');
+
+        // Immediate Auto-play for single generation
+        if (autoPlay) {
+          pauseAllAudioPlayers();
+          stopSequentialPlayback();
+          const playPromise = block.audioElement.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(e => console.warn('Auto-play error:', e));
+          }
+        }
+
       } catch (err) {
         console.error('TTS Generation Error:', err);
         showToast(err.message, 'error');
       } finally {
         block.isGenerating = false;
-        generateBtn.disabled = false;
-        generateText.textContent = '音声生成';
+        if (!appState.isBatchGenerating) {
+          generateBtn.disabled = false;
+          generateBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
+        if (generateIcon) generateIcon.classList.remove('hidden');
+        if (spinnerIcon) spinnerIcon.classList.add('hidden');
+        if (generateText) generateText.textContent = '音声生成';
       }
     }
 
@@ -2110,7 +2858,11 @@
       audio.onended = () => {
         playIcon.classList.remove('hidden');
         pauseIcon.classList.add('hidden');
+        audio.currentTime = 0;
         seekbar.value = 0;
+        if (!isNaN(audio.duration) && audio.duration > 0) {
+          timeDisplay.textContent = `00:00 / ${formatTime(audio.duration)}`;
+        }
       };
 
       seekbar.oninput = () => {
@@ -2503,7 +3255,9 @@
         exportedAt: now.toISOString(),
         settings: {
           apiKey: appState.apiKey || '',
-          theme: localStorage.getItem(STORAGE_KEY_THEME) || 'dark'
+          theme: localStorage.getItem(STORAGE_KEY_THEME) || 'dark',
+          defaultModel: appState.defaultModel || 'gemini-3.8-flash-tts',
+          defaultVoice: appState.defaultVoice || 'prebuilt:Puck'
         },
         currentProjectId: appState.currentProjectId,
         projects: cleanProjects,
@@ -2575,6 +3329,19 @@
         const importedTheme = data.settings?.theme || data.theme;
         if (importedTheme) {
           setTheme(importedTheme === 'dark');
+        }
+
+        // Restore Default Model & Voice
+        if (data.settings && data.settings.defaultModel) {
+          appState.defaultModel = data.settings.defaultModel;
+          localStorage.setItem(STORAGE_KEY_DEFAULT_MODEL, appState.defaultModel);
+          const dm = document.getElementById('default-model-select');
+          if (dm) dm.value = appState.defaultModel;
+        }
+        if (data.settings && data.settings.defaultVoice) {
+          appState.defaultVoice = data.settings.defaultVoice;
+          localStorage.setItem(STORAGE_KEY_DEFAULT_VOICE, appState.defaultVoice);
+          renderDefaultVoiceSelect();
         }
 
         // Restore Cloned Voices
@@ -2706,6 +3473,7 @@
       renderSidebarSnapshots();
       renderSidebarClonedVoices();
       renderCurrentProjectView();
+      initDefaultSettingsUI();
       initTooltipListeners();
 
       // Check if API key is missing on first launch -> auto open settings modal
@@ -2814,16 +3582,80 @@
 
       // Batch Generate All Blocks
       document.getElementById('btn-generate-all-blocks').addEventListener('click', async () => {
-        const project = getCurrentProject();
-        if (!project.blocks || project.blocks.length === 0) return;
-        showToast('全ブロックの生成を開始します...', 'info');
-        for (const block of project.blocks) {
-          const cardEl = document.getElementById(`block-${block.id}`);
-          if (cardEl && (!block.audioUrl || block.isGenerating === false)) {
-            await generateTTSForBlock(block, cardEl);
-          }
+        if (appState.isBatchGenerating) return;
+
+        if (!appState.apiKey) {
+          openSettingsModal();
+          showToast('Gemini APIキーを設定してください', 'error');
+          return;
         }
-        showToast('全ブロックの生成処理が完了しました！', 'success');
+
+        const project = getCurrentProject();
+        if (!project.blocks || project.blocks.length === 0) {
+          showToast('生成するブロックがありません', 'info');
+          return;
+        }
+
+        const batchBtn = document.getElementById('btn-generate-all-blocks');
+        const batchIcon = batchBtn ? batchBtn.querySelector('.icon-batch') : null;
+        const batchSpinner = batchBtn ? batchBtn.querySelector('.icon-batch-spinner') : null;
+        const batchText = batchBtn ? batchBtn.querySelector('.btn-batch-text') : null;
+
+        appState.isBatchGenerating = true;
+        if (batchBtn) {
+          batchBtn.disabled = true;
+          batchBtn.classList.add('opacity-75', 'cursor-not-allowed');
+        }
+        if (batchIcon) batchIcon.classList.add('hidden');
+        if (batchSpinner) batchSpinner.classList.remove('hidden');
+        if (batchText) batchText.textContent = '全ブロック生成中...';
+
+        document.querySelectorAll('.btn-generate-audio').forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add('opacity-75', 'cursor-not-allowed');
+        });
+
+        stopSequentialPlayback();
+        pauseAllAudioPlayers();
+        showToast('全ブロックの一括生成を開始します...', 'info');
+
+        try {
+          let successCount = 0;
+          for (const block of project.blocks) {
+            const cardEl = document.getElementById(`block-${block.id}`);
+            if (cardEl) {
+              try {
+                await generateTTSForBlock(block, cardEl, false);
+                if (block.audioUrl) successCount++;
+              } catch (blockErr) {
+                console.error(`Block ${block.id} batch generation error:`, blockErr);
+              }
+            }
+          }
+          if (successCount > 0) {
+            showToast(`全ブロックの生成処理が完了しました（${successCount}件完了）！`, 'success');
+            startSequentialPlayback(project.blocks);
+          } else {
+            showToast('音声を生成できませんでした。各ブロックのテキストや設定をご確認ください。', 'error');
+          }
+        } catch (err) {
+          console.error('Batch generation error:', err);
+          showToast('一括生成中にエラーが発生しました: ' + (err.message || err), 'error');
+        } finally {
+          appState.isBatchGenerating = false;
+          if (batchBtn) {
+            batchBtn.disabled = false;
+            batchBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+          }
+          if (batchIcon) batchIcon.classList.remove('hidden');
+          if (batchSpinner) batchSpinner.classList.add('hidden');
+          if (batchText) batchText.textContent = 'すべてのブロックを一括生成';
+
+          document.querySelectorAll('.btn-generate-audio').forEach(btn => {
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+          });
+        }
       });
 
       // Voice Replication Modal Triggers
