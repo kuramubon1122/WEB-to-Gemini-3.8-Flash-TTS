@@ -1046,6 +1046,17 @@
           }
         });
 
+        // Also clean up any snapshot blocks
+        appState.snapshots.forEach(s => {
+          if (s.blocks) {
+            s.blocks.forEach(b => {
+              b.audioUrl = null;
+              b.audioElement = null;
+              b.isGenerating = false;
+            });
+          }
+        });
+
       } catch (err) {
         console.error('Failed to load state from localStorage:', err);
       }
@@ -1053,7 +1064,20 @@
 
     function saveProjectsToStorage() {
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(appState.projects));
+        const cleanProjects = appState.projects.map(p => ({
+          id: p.id,
+          name: p.name,
+          createdAt: p.createdAt,
+          blocks: (p.blocks || []).map(b => ({
+            id: b.id,
+            model: b.model,
+            voiceType: b.voiceType,
+            voiceId: normalizeVoiceId(b.voiceId),
+            text: b.text || '',
+            stylePrompt: b.stylePrompt || ''
+          }))
+        }));
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(cleanProjects));
         localStorage.setItem(STORAGE_KEY_CURRENT_PROJECT_ID, appState.currentProjectId);
       } catch (e) {
         console.error('Storage save error:', e);
@@ -1488,6 +1512,22 @@
       return card;
     }
 
+    function pauseAllAudioPlayers() {
+      appState.projects.forEach(p => {
+        (p.blocks || []).forEach(b => {
+          if (b.audioElement instanceof Audio && !b.audioElement.paused) {
+            b.audioElement.pause();
+          }
+        });
+      });
+      if (appState.cloneModal.training.audioEl instanceof Audio && !appState.cloneModal.training.audioEl.paused) {
+        appState.cloneModal.training.audioEl.pause();
+      }
+      if (appState.cloneModal.consent.audioEl instanceof Audio && !appState.cloneModal.consent.audioEl.paused) {
+        appState.cloneModal.consent.audioEl.pause();
+      }
+    }
+
     function initBlockAudioPlayer(card, block) {
       const playBtn = card.querySelector('.btn-play-block');
       const playIcon = card.querySelector('.icon-play-block');
@@ -1496,14 +1536,14 @@
       const timeDisplay = card.querySelector('.block-time-display');
       const downloadBtn = card.querySelector('.btn-download-block');
 
-      if (block.audioElement) {
+      if (block.audioElement instanceof Audio) {
         try {
           block.audioElement.pause();
           block.audioElement.src = '';
         } catch (_) {}
       }
-      block.audioElement = new Audio();
-      const audio = block.audioElement;
+      const audio = new Audio();
+      block.audioElement = audio;
 
       if (block.audioUrl) {
         audio.src = block.audioUrl;
@@ -1513,8 +1553,8 @@
       playBtn.addEventListener('click', () => {
         if (!audio.src) return;
         if (audio.paused) {
-          document.querySelectorAll('audio').forEach(a => a.pause());
-          audio.play();
+          pauseAllAudioPlayers();
+          audio.play().catch(e => console.warn('Audio play error:', e));
         } else {
           audio.pause();
         }
@@ -1582,9 +1622,17 @@
       const idx = project.blocks.findIndex(b => b.id === blockId);
       if (idx !== -1) {
         const source = project.blocks[idx];
-        const copy = JSON.parse(JSON.stringify(source));
-        copy.id = generateUniqueId('blk');
-        copy.audioUrl = null;
+        const copy = {
+          id: generateUniqueId('blk'),
+          model: source.model || 'gemini-3.8-flash-tts',
+          voiceType: source.voiceType || 'prebuilt',
+          voiceId: source.voiceId || 'Puck',
+          text: source.text || '',
+          stylePrompt: source.stylePrompt || '',
+          audioUrl: null,
+          audioElement: null,
+          isGenerating: false
+        };
         project.blocks.splice(idx + 1, 0, copy);
         saveProjectsToStorage();
         renderTTSBlocks();
@@ -1904,8 +1952,8 @@
         saveProjectsToStorage();
 
         // Update player UI
-        if (!block.audioElement) {
-          block.audioElement = new Audio();
+        if (!(block.audioElement instanceof Audio)) {
+          initBlockAudioPlayer(card, block);
         }
         block.audioElement.src = audioUrl;
         downloadBtn.href = audioUrl;
@@ -1940,15 +1988,15 @@
 
     function closeVoiceCloneModal() {
       stopActiveRecording();
-      if (appState.cloneModal.training.audioEl) appState.cloneModal.training.audioEl.pause();
-      if (appState.cloneModal.consent.audioEl) appState.cloneModal.consent.audioEl.pause();
+      if (appState.cloneModal.training.audioEl instanceof Audio) appState.cloneModal.training.audioEl.pause();
+      if (appState.cloneModal.consent.audioEl instanceof Audio) appState.cloneModal.consent.audioEl.pause();
 
       document.getElementById('modal-voice-clone').classList.add('hidden');
     }
 
     function resetCloneModalSlot(slot) {
       const slotData = appState.cloneModal[slot];
-      if (slotData.audioEl) {
+      if (slotData.audioEl instanceof Audio) {
         slotData.audioEl.pause();
         slotData.audioEl = null;
       }
@@ -2013,10 +2061,14 @@
 
     function initCloneSlotPlayer(slot) {
       const slotData = appState.cloneModal[slot];
-      if (!slotData.audioEl) {
-        slotData.audioEl = new Audio();
+      if (slotData.audioEl instanceof Audio) {
+        try {
+          slotData.audioEl.pause();
+          slotData.audioEl.src = '';
+        } catch (_) {}
       }
-      const audio = slotData.audioEl;
+      const audio = new Audio();
+      slotData.audioEl = audio;
       audio.src = slotData.audioUrl;
 
       const playBtn = document.getElementById(`btn-play-${slot}`);
@@ -2027,7 +2079,8 @@
 
       playBtn.onclick = () => {
         if (audio.paused) {
-          audio.play();
+          pauseAllAudioPlayers();
+          audio.play().catch(e => console.warn('Audio play error:', e));
         } else {
           audio.pause();
         }
