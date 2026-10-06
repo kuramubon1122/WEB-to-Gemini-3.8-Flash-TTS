@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini 3.8 Flash TTS Studio</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            },
+            gemini: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100,116,139,0.3);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100,116,139,0.5);
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* Wave visualizer pulse */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-ring {
+      animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Custom range input styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type=range]:focus {
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .dark input[type=range]::-webkit-slider-runnable-track {
+      background: #475569;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #7c3aed;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      transition: transform 0.1s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Global Tooltip Element */
+    #global-tooltip {
+      pointer-events: none;
+      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 shadow-sm">
+    <div class="flex items-center gap-3">
+      <!-- Sidebar Toggle Button -->
+      <button id="btn-toggle-sidebar" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors" title="サイドバーの表示切替">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+        </svg>
+      </button>
+
+      <!-- App Logo & Title -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Gemini TTS Studio</h1>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 border border-purple-200 dark:border-purple-800">3.8 Flash</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Flash TTS & Flash-Lite TTS + Voice Cloning</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Header Actions -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- API Key Status Button -->
+      <button id="btn-api-key-status" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">
+        <span id="api-key-indicator" class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span id="api-key-status-text">APIキー未設定</span>
+      </button>
+
+      <!-- Dark Mode Toggle -->
+      <button id="btn-theme-toggle" class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="ダーク/ライトモード切替">
+        <svg id="theme-icon-dark" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+        <svg id="theme-icon-light" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+      </button>
+
+      <!-- Primary Action: 音声作成（クローン）ボタン -->
+      <button id="btn-open-voice-clone" class="flex items-center gap-2 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 shadow-md shadow-indigo-500/25 hover:shadow-indigo-500/40 transform active:scale-95 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+        </svg>
+        <span>音声作成</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTAINER WITH SIDEBAR ==================== -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- ==================== SIDEBAR (TASKBAR) ==================== -->
+    <aside id="sidebar" class="w-72 sm:w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col transition-all duration-300 ease-in-out shrink-0 z-20">
+      <!-- Sidebar Top Actions -->
+      <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+        <button id="btn-create-project" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/80 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          <span>＋ 新規プロジェクト作成</span>
+        </button>
+      </div>
+
+      <!-- Projects List Header -->
+      <div class="px-4 pt-4 pb-2 flex items-center justify-between text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+        <span>プロジェクト一覧</span>
+        <span id="projects-count" class="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-slate-500 font-normal">0</span>
+      </div>
+
+      <!-- Projects List Container -->
+      <div id="projects-list" class="flex-1 overflow-y-auto px-3 py-1 space-y-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Cloned Voices Library in Sidebar -->
+      <div class="border-t border-slate-100 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/50">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+            </svg>
+            登録済みクローン音声
+          </span>
+          <span id="cloned-voices-count" class="text-xs text-slate-400">0件</span>
+        </div>
+        <div id="sidebar-cloned-voices" class="max-h-36 overflow-y-auto space-y-1 text-xs">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Sidebar Footer (Key Setting Trigger) -->
+      <div class="p-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
+        <span class="truncate">Gemini 3.8 Flash Engine</span>
+        <button id="btn-sidebar-settings" class="hover:text-purple-600 dark:hover:text-purple-400 underline transition-colors">設定</button>
+      </div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT AREA ==================== -->
+    <main class="flex-1 flex flex-col overflow-y-auto bg-slate-50/50 dark:bg-slate-950/50">
+      
+      <!-- Current Project Header Banner -->
+      <div class="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/40 backdrop-blur flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <input id="current-project-title-input" type="text" class="text-lg sm:text-xl font-bold bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-purple-500 focus:outline-none px-1 text-slate-800 dark:text-slate-100 transition-colors" value="新規プロジェクト" title="クリックして名前を変更">
+            <span id="current-project-id-badge" class="font-mono text-xs text-slate-500 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">ID: -</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Gemini 3.8 Flash TTS / 3.8 Flash-Lite TTS による文章読み上げと音声クローン</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Batch Generate All Blocks -->
+          <button id="btn-generate-all-blocks" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-xl text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-sm transition-colors">
+            <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>すべてのブロックを一括生成</span>
+          </button>
+
+          <!-- Add Block Button -->
+          <button id="btn-add-block-header" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>ブロック追加</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TTS Blocks Container -->
+      <div class="flex-1 p-4 sm:p-6 max-w-5xl w-full mx-auto space-y-5">
+        
+        <!-- Blocks List -->
+        <div id="tts-blocks-container" class="space-y-4">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Add Block Big Button at bottom -->
+        <div class="pt-2">
+          <button id="btn-add-block-bottom" class="w-full py-4 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-2xl flex items-center justify-center gap-2.5 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 bg-white/40 dark:bg-slate-900/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-all font-medium text-sm group">
+            <span class="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+            </span>
+            <span>＋ 新しいTTSブロックを追加</span>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== VOICE REPLICATION MODAL ==================== -->
+  <div id="modal-voice-clone" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-2xl w-full my-8 overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-md">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">音声クローン作成（Voice Replication）</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Gemini API Voice Replication エンドポイントに登録</p>
+          </div>
+        </div>
+
+        <button id="btn-close-voice-clone" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        
+        <!-- Project ID Info Badge -->
+        <div class="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">自動発行プロジェクトID:</span>
+            <span id="clone-project-id-display" class="font-mono text-xs font-bold text-purple-600 dark:text-purple-400">-</span>
+          </div>
+          <span class="text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded font-medium">自動保存完了</span>
+        </div>
+
+        <!-- 1. Voice Name Input -->
+        <div>
+          <label for="clone-voice-name" class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+            音声名 <span class="text-rose-500">*</span>
+          </label>
+          <input id="clone-voice-name" type="text" placeholder="例: 私のナレーション音声A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all">
+          <p class="text-xs text-slate-400 mt-1">作成後にTTSブロックのボイス選択から呼び出せる名称です。</p>
+        </div>
+
+        <!-- 2. 学習用音声（約20秒）セクション -->
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 flex items-center justify-center text-xs font-bold">1</span>
+              <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">学習用音声（約20秒）</h4>
+            </div>
+            <span id="status-badge-training" class="text-xs px-2.5 py-0.5 rounded-full font-medium bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">未設定</span>
+          </div>
+          
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            クリアな環境で、約20秒程度自然なスピードとトーンで話した音声を録音またはファイルからアップロードしてください。
+          </p>
+
+          <!-- Input Action Buttons (録音 & ファイルアップロード) -->
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Recording Trigger -->
+            <div class="tooltip-wrapper" data-slot="training" data-disabled-tooltip="すでに録音が完了またはファイルがアップロードされています。">
+              <button id="btn-rec-training" class="rec-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span class="rec-btn-text">録音開始</span>
+              </button>
+            </div>
+
+            <!-- Upload Trigger -->
+            <div class="tooltip-wrapper" data-slot="training" data-disabled-tooltip="すでに録音が完了またはファイルがアップロードされています。">
+              <label id="btn-upload-training-label" class="upload-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm cursor-pointer">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                <span>ファイルアップロード (.wav, .mp3, .m4a)</span>
+                <input id="file-upload-training" type="file" accept=".wav,.mp3,.m4a,audio/wav,audio/mpeg,audio/mp4,audio/x-m4a" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- Active Recording Status Display (Training) -->
+          <div id="rec-active-training" class="hidden p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full bg-rose-600 animate-ping"></span>
+              <span class="text-xs font-semibold text-rose-700 dark:text-rose-300">録音中... (<span id="rec-timer-training">00:00</span> / 約00:20)</span>
+            </div>
+            <button id="btn-stop-rec-training" class="px-3 py-1 rounded-md text-xs font-bold text-white bg-rose-600 hover:bg-rose-700">停止</button>
+          </div>
+
+          <!-- Player Container (Training Audio) -->
+          <div id="player-container-training" class="hidden p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                学習用音声が確定しました（24kHz LINEAR16 WAV変換済）
+              </span>
+              <!-- 削除ボタン -->
+              <button id="btn-delete-training" class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:underline flex items-center gap-1" title="音声を削除して再録音または再アップロード">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                <span>削除</span>
+              </button>
+            </div>
+
+            <!-- Custom Audio Player Bar -->
+            <div class="flex items-center gap-3">
+              <!-- Play / Pause -->
+              <button id="btn-play-training" class="w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center shrink-0 transition-colors">
+                <svg id="play-icon-training" class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <svg id="pause-icon-training" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+              </button>
+
+              <!-- SeekBar -->
+              <input id="seekbar-training" type="range" min="0" max="100" value="0" step="0.1" class="flex-1">
+
+              <!-- Time display -->
+              <span id="time-display-training" class="font-mono text-xs text-slate-500 dark:text-slate-400 shrink-0">00:00 / 00:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 認証用音声セクション -->
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">2</span>
+              <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100">認証用音声（同意ステートメント）</h4>
+            </div>
+            <span id="status-badge-consent" class="text-xs px-2.5 py-0.5 rounded-full font-medium bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">未設定</span>
+          </div>
+
+          <!-- Mandatory Consent Statement Notice Card -->
+          <div class="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200">
+            <div class="flex items-start gap-2">
+              <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <div>
+                <span class="text-xs font-bold block mb-1">【指定の同意文（録音時に読み上げてください）】</span>
+                <p id="consent-statement-text" class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-amber-300 dark:border-amber-800 select-all">
+                  「私はこの音声の所有者であり、Google がこの音声を使用して音声合成モデルを作成することを承認します。」
+                </p>
+                <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-1">※Gemini APIにより本人同一性と同意文の照合が行われます。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Action Buttons (録音 & ファイルアップロード) -->
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Recording Trigger -->
+            <div class="tooltip-wrapper" data-slot="consent" data-disabled-tooltip="すでに録音が完了またはファイルがアップロードされています。">
+              <button id="btn-rec-consent" class="rec-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span class="rec-btn-text">認証用録音開始</span>
+              </button>
+            </div>
+
+            <!-- Upload Trigger -->
+            <div class="tooltip-wrapper" data-slot="consent" data-disabled-tooltip="すでに録音が完了またはファイルがアップロードされています。">
+              <label id="btn-upload-consent-label" class="upload-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm cursor-pointer">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                <span>認証ファイルアップロード (.wav, .mp3, .m4a)</span>
+                <input id="file-upload-consent" type="file" accept=".wav,.mp3,.m4a,audio/wav,audio/mpeg,audio/mp4,audio/x-m4a" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- Active Recording Status Display (Consent) -->
+          <div id="rec-active-consent" class="hidden p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full bg-rose-600 animate-ping"></span>
+              <span class="text-xs font-semibold text-rose-700 dark:text-rose-300">同意文を読み上げてください (<span id="rec-timer-consent">00:00</span>)</span>
+            </div>
+            <button id="btn-stop-rec-consent" class="px-3 py-1 rounded-md text-xs font-bold text-white bg-rose-600 hover:bg-rose-700">停止</button>
+          </div>
+
+          <!-- Player Container (Consent Audio) -->
+          <div id="player-container-consent" class="hidden p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                認証用音声が確定しました（24kHz LINEAR16 WAV変換済）
+              </span>
+              <!-- 削除ボタン -->
+              <button id="btn-delete-consent" class="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:underline flex items-center gap-1" title="認証音声を削除して再録音または再アップロード">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                <span>削除</span>
+              </button>
+            </div>
+
+            <!-- Custom Audio Player Bar -->
+            <div class="flex items-center gap-3">
+              <!-- Play / Pause -->
+              <button id="btn-play-consent" class="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shrink-0 transition-colors">
+                <svg id="play-icon-consent" class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <svg id="pause-icon-consent" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+              </button>
+
+              <!-- SeekBar -->
+              <input id="seekbar-consent" type="range" min="0" max="100" value="0" step="0.1" class="flex-1">
+
+              <!-- Time display -->
+              <span id="time-display-consent" class="font-mono text-xs text-slate-500 dark:text-slate-400 shrink-0">00:00 / 00:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Request Status / Error Notice -->
+        <div id="clone-api-status" class="hidden p-3 rounded-xl text-xs"></div>
+      </div>
+
+      <!-- Modal Footer (音声合成開始ボタン) -->
+      <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+        <p id="clone-validation-hint" class="text-xs text-slate-500 dark:text-slate-400">
+          学習用音声と認証用音声の両方を完了してください。
+        </p>
+
+        <button id="btn-submit-voice-clone" disabled class="px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-600 dark:text-slate-300 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 cursor-not-allowed transition-all flex items-center gap-2 shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          <span id="btn-submit-clone-text">音声合成開始（クローン開始）</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== API KEY SETUP MODAL ==================== -->
+  <div id="modal-api-key" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 space-y-5">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Gemini APIキーの設定</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Gemini 3.8 Flash TTS およびクローン機能を利用</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        Google AI Studio で発行したAPIキーを入力してください。キーはお使いのブラウザの <code class="bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded text-purple-600 font-mono">localStorage</code> に安全に保管され、外部サーバーには送信されません。
+      </p>
+
+      <div>
+        <label for="input-api-key" class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          Gemini API Key
+        </label>
+        <div class="relative">
+          <input id="input-api-key" type="password" placeholder="AIzaSy..." class="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm font-mono focus:ring-2 focus:ring-purple-500 focus:outline-none">
+          <button id="btn-toggle-key-visibility" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
+          <span>Google AI Studio でキーを取得</span>
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+          </svg>
+        </a>
+
+        <button id="btn-save-api-key" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-md transition-colors">
+          保存して利用開始
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== GLOBAL HOVER TOOLTIP ==================== -->
+  <div id="global-tooltip" role="tooltip" class="fixed z-50 px-3 py-1.5 text-xs font-medium text-white bg-slate-900 dark:bg-slate-800 border border-slate-700 rounded-lg shadow-xl opacity-0 pointer-events-none transform -translate-x-1/2 -translate-y-2">
+    <span id="global-tooltip-text">すでに録音が完了またはファイルがアップロードされています。</span>
+    <!-- Tooltip arrow -->
+    <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm"></div>
+
+  <!-- ==================== JAVASCRIPT APPLICATION CODE ==================== -->
+  <script>
+    /**
+     * Gemini 3.8 Flash TTS & Voice Cloning Web App
+     * Fully self-contained single-file architecture
+     */
+
+    // --- State Constants & Storage Keys ---
+    const STORAGE_KEY_API_KEY = 'gemini_tts_api_key';
+    const STORAGE_KEY_PROJECTS = 'gemini_tts_projects';
+    const STORAGE_KEY_CURRENT_PROJECT_ID = 'gemini_tts_current_project_id';
+    const STORAGE_KEY_CLONED_VOICES = 'gemini_tts_cloned_voices';
+    const STORAGE_KEY_THEME = 'gemini_tts_theme';
+
+    // Standard Gemini 3.8 TTS Prebuilt Voices
+    const PREBUILT_VOICES = [
+      { id: 'Puck', name: 'Puck (快活・親しみやすい/男性)' },
+      { id: 'Kore', name: 'Kore (落ち着き・明瞭/女性)' },
+      { id: 'Zephyr', name: 'Zephyr (温かみ・滑らか/中性)' },
+      { id: 'Aoede', name: 'Aoede (上品・物語朗読/女性)' },
+      { id: 'Charon', name: 'Charon (深み・重厚/男性)' },
+      { id: 'Fenrir', name: 'Fenrir (力強い・ドラマチック/男性)' },
+      { id: 'Orus', name: 'Orus (自信・アナウンサー調/男性)' },
+      { id: 'Autonoe', name: 'Autonoe (優美・穏やか/女性)' },
+      { id: 'Umbriel', name: 'Umbriel (静か・知性的/中性)' },
+      { id: 'Erinome', name: 'Erinome (クリア・明朗/女性)' },
+      { id: 'Laomedeia', name: 'Laomedeia (自然体・会話調/女性)' },
+      { id: 'Schedar', name: 'Schedar (堂々とした語り/男性)' }
+    ];
+
+    // Style presets for prompt hints
+    const STYLE_PRESETS = [
+      '明るく元気なナレーション',
+      '落ち着いたニュース解説トーン',
+      '感情を込めたドラマチックな語り',
+      '優しく包み込むようなささやき声',
+      '親しみやすくテンポの良いラジオ風',
+      '緊迫感を持った早口の解説'
+    ];
+
+    // Vocal tag presets
+    const VOCAL_TAGS = [
+      { tag: '<short pause>', label: '短い間' },
+      { tag: '<laugh>', label: '笑い' },
+      { tag: '<sigh>', label: 'ため息' },
+      { tag: '<breath>', label: 'ブレス' },
+      { tag: '<cough>', label: '咳払い' }
+    ];
+
+    // --- Application State ---
+    const appState = {
+      apiKey: '',
+      projects: [],
+      currentProjectId: '',
+      clonedVoices: [],
+      sidebarOpen: true,
+      
+      // Voice Replication Modal Transient State
+      cloneModal: {
+        projectId: '',
+        voiceName: '',
+        training: {
+          blob: null,
+          wavBuffer: null,
+          base64: null,
+          audioUrl: null,
+          audioEl: null,
+          isPlaying: false
+        },
+        consent: {
+          blob: null,
+          wavBuffer: null,
+          base64: null,
+          audioUrl: null,
+          audioEl: null,
+          isPlaying: false
+        },
+        mediaRecorder: null,
+        activeRecordingSlot: null,
+        recordingStartTime: null,
+        recordingTimerInterval: null
+      }
+    };
+
+    // --- Audio Context for 24kHz LINEAR16 WAV Conversion ---
+    let sharedAudioContext = null;
+    function getAudioContext() {
+      if (!sharedAudioContext) {
+        sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+      }
+      if (sharedAudioContext.state === 'suspended') {
+        sharedAudioContext.resume();
+      }
+      return sharedAudioContext;
+    }
+
+    /**
+     * Converts any audio Blob/File (.wav, .mp3, .m4a) to 24kHz Mono 16-bit LINEAR16 WAV
+     */
+    async function convertAudioTo24kWav(fileOrBlob) {
+      const arrayBuffer = await fileOrBlob.arrayBuffer();
+      const audioCtx = getAudioContext();
+      
+      // Decode audio data to AudioBuffer
+      const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      
+      // Resample to 24000Hz mono using OfflineAudioContext
+      const targetSampleRate = 24000;
+      const targetLength = Math.ceil(decodedBuffer.duration * targetSampleRate);
+      const offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
+      
+      const source = offlineCtx.createBufferSource();
+      source.buffer = decodedBuffer;
+      source.connect(offlineCtx.destination);
+      source.start(0);
+      
+      const renderedBuffer = await offlineCtx.startRendering();
+      const channelData = renderedBuffer.getChannelData(0);
+      
+      // Construct 16-bit PCM RIFF WAV
+      const numChannels = 1;
+      const bitDepth = 16;
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      const byteRate = targetSampleRate * blockAlign;
+      const dataSize = channelData.length * bytesPerSample;
+      
+      const wavBuffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(wavBuffer);
+      
+      function writeString(offset, str) {
+        for (let i = 0; i < str.length; i++) {
+          view.setUint8(offset + i, str.charCodeAt(i));
+        }
+      }
+      
+      // RIFF chunk descriptor
+      writeString(0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(8, 'WAVE');
+      
+      // "fmt " sub-chunk
+      writeString(12, 'fmt ');
+      view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+      view.setUint16(20, 1, true);  // AudioFormat (1 = PCM)
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, targetSampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitDepth, true);
+      
+      // "data" sub-chunk
+      writeString(36, 'data');
+      view.setUint32(40, dataSize, true);
+      
+      // Write 16-bit PCM samples
+      let offset = 44;
+      for (let i = 0; i < channelData.length; i++) {
+        let sample = Math.max(-1, Math.min(1, channelData[i]));
+        let intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset, intSample, true);
+        offset += 2;
+      }
+      
+      // Create Base64 string safely
+      const uint8 = new Uint8Array(wavBuffer);
+      let binaryStr = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < uint8.length; i += chunkSize) {
+        binaryStr += String.fromCharCode.apply(null, uint8.subarray(i, Math.min(i + chunkSize, uint8.length)));
+      }
+      const base64 = btoa(binaryStr);
+      const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+      
+      return { wavBuffer, base64, wavBlob, duration: renderedBuffer.duration };
+    }
+
+    // --- Helper Functions ---
+    function formatTime(seconds) {
+      if (isNaN(seconds) || seconds < 0) return '00:00';
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function generateUniqueId(prefix = 'proj') {
+      return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bgColors = {
+        success: 'bg-emerald-600 text-white',
+        error: 'bg-rose-600 text-white',
+        info: 'bg-slate-800 text-white'
+      };
+      toast.className = `px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2 transform transition-all duration-300 pointer-events-auto ${bgColors[type] || bgColors.info}`;
+      toast.innerHTML = `
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${type === 'success' ? 'M5 13l4 4L19 7' : type === 'error' ? 'M6 18L18 6M6 6l12 12' : 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'}"/>
+        </svg>
+        <span class="flex-1">${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // --- Tooltip Handler (1-Second Delay on Disabled Buttons) ---
+    let hoverTimer = null;
+    const globalTooltip = document.getElementById('global-tooltip');
+    const globalTooltipText = document.getElementById('global-tooltip-text');
+
+    function initTooltipListeners() {
+      document.addEventListener('mouseover', (e) => {
+        const wrapper = e.target.closest('.tooltip-wrapper');
+        if (wrapper && wrapper.getAttribute('data-is-disabled') === 'true') {
+          const msg = wrapper.getAttribute('data-disabled-tooltip') || 'すでに録音が完了またはファイルがアップロードされています。';
+          clearTimeout(hoverTimer);
+          hoverTimer = setTimeout(() => {
+            const rect = wrapper.getBoundingClientRect();
+            globalTooltipText.textContent = msg;
+            globalTooltip.style.left = `${rect.left + rect.width / 2}px`;
+            globalTooltip.style.top = `${rect.top - 8}px`;
+            globalTooltip.classList.remove('opacity-0', 'pointer-events-none');
+            globalTooltip.classList.add('opacity-100');
+          }, 1000); // 1-second delay requirement
+        }
+      });
+
+      document.addEventListener('mouseout', (e) => {
+        const wrapper = e.target.closest('.tooltip-wrapper');
+        if (wrapper) {
+          clearTimeout(hoverTimer);
+          globalTooltip.classList.remove('opacity-100');
+          globalTooltip.classList.add('opacity-0', 'pointer-events-none');
+        }
+      });
+    }
+
+    // --- LocalStorage Persistence ---
+    function loadStateFromStorage() {
+      try {
+        appState.apiKey = localStorage.getItem(STORAGE_KEY_API_KEY) || '';
+        const savedProjects = localStorage.getItem(STORAGE_KEY_PROJECTS);
+        appState.projects = savedProjects ? JSON.parse(savedProjects) : [];
+        appState.currentProjectId = localStorage.getItem(STORAGE_KEY_CURRENT_PROJECT_ID) || '';
+        const savedVoices = localStorage.getItem(STORAGE_KEY_CLONED_VOICES);
+        appState.clonedVoices = savedVoices ? JSON.parse(savedVoices) : [];
+
+        // If no projects exist, create default project
+        if (appState.projects.length === 0) {
+          const defaultProject = {
+            id: generateUniqueId('proj'),
+            name: 'デフォルトプロジェクト',
+            createdAt: new Date().toISOString(),
+            blocks: [
+              {
+                id: generateUniqueId('blk'),
+                model: 'gemini-3.8-flash-tts',
+                voiceType: 'prebuilt',
+                voiceId: 'Puck',
+                text: 'こんにちは！Gemini 3.8 Flash TTS による、高品質で表現力豊かな音声合成の世界へようこそ。',
+                stylePrompt: '明るく親しみやすいトーンで元気に',
+                audioUrl: null,
+                isGenerating: false
+              }
+            ]
+          };
+          appState.projects.push(defaultProject);
+          appState.currentProjectId = defaultProject.id;
+          saveProjectsToStorage();
+        } else if (!appState.projects.some(p => p.id === appState.currentProjectId)) {
+          appState.currentProjectId = appState.projects[0].id;
+        }
+      } catch (err) {
+        console.error('Failed to load state from localStorage:', err);
+      }
+    }
+
+    function saveProjectsToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(appState.projects));
+        localStorage.setItem(STORAGE_KEY_CURRENT_PROJECT_ID, appState.currentProjectId);
+      } catch (e) {
+        console.error('Storage save error:', e);
+      }
+    }
+
+    function saveClonedVoicesToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_CLONED_VOICES, JSON.stringify(appState.clonedVoices));
+      } catch (e) {
+        console.error('Cloned voices save error:', e);
+      }
+    }
+
+    function getCurrentProject() {
+      return appState.projects.find(p => p.id === appState.currentProjectId) || appState.projects[0];
+    }
+
+    // --- UI Update & Rendering ---
+    function updateApiKeyStatusUI() {
+      const indicator = document.getElementById('api-key-indicator');
+      const text = document.getElementById('api-key-status-text');
+      if (appState.apiKey && appState.apiKey.trim().length > 0) {
+        indicator.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        text.textContent = 'APIキー設定済';
+      } else {
+        indicator.className = 'w-2 h-2 rounded-full bg-amber-500';
+        text.textContent = 'APIキー未設定';
+      }
+    }
+
+    function renderSidebarProjects() {
+      const container = document.getElementById('projects-list');
+      const countEl = document.getElementById('projects-count');
+      container.innerHTML = '';
+      countEl.textContent = appState.projects.length;
+
+      appState.projects.forEach(project => {
+        const isActive = project.id === appState.currentProjectId;
+        const item = document.createElement('div');
+        item.className = `group flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs transition-colors ${
+          isActive 
+            ? 'bg-purple-100/80 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 font-semibold border border-purple-200 dark:border-purple-800' 
+            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+        }`;
+        
+        item.innerHTML = `
+          <div class="flex items-center gap-2 truncate flex-1 min-w-0" data-project-id="${project.id}">
+            <svg class="w-4 h-4 shrink-0 ${isActive ? 'text-purple-600 dark:text-purple-400' : 'text-slate-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+            <span class="truncate">${escapeHtml(project.name)}</span>
+          </div>
+          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button class="btn-delete-proj p-1 hover:text-rose-600 dark:hover:text-rose-400" title="プロジェクトを削除" data-project-id="${project.id}">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        `;
+
+        item.querySelector(`[data-project-id="${project.id}"]`).addEventListener('click', () => {
+          switchProject(project.id);
+        });
+
+        const deleteBtn = item.querySelector('.btn-delete-proj');
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteProject(project.id);
+          });
+        }
+
+        container.appendChild(item);
+      });
+    }
+
+    function renderSidebarClonedVoices() {
+      const container = document.getElementById('sidebar-cloned-voices');
+      const countEl = document.getElementById('cloned-voices-count');
+      container.innerHTML = '';
+      countEl.textContent = `${appState.clonedVoices.length}件`;
+
+      if (appState.clonedVoices.length === 0) {
+        container.innerHTML = '<p class="text-slate-400 dark:text-slate-500 py-1">クローン音声は未登録です</p>';
+        return;
+      }
+
+      appState.clonedVoices.forEach(voice => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700';
+        item.innerHTML = `
+          <div class="truncate flex-1 min-w-0 pr-1">
+            <p class="font-medium text-slate-700 dark:text-slate-200 truncate">${escapeHtml(voice.name)}</p>
+            <p class="font-mono text-[10px] text-purple-600 dark:text-purple-400 truncate">${voice.id}</p>
+          </div>
+          <button class="btn-del-voice text-slate-400 hover:text-rose-500 p-1" title="クローン音声を削除" data-voice-id="${voice.id}">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        `;
+        item.querySelector('.btn-del-voice').addEventListener('click', () => {
+          deleteClonedVoice(voice.id);
+        });
+        container.appendChild(item);
+      });
+    }
+
+    function renderCurrentProjectView() {
+      const project = getCurrentProject();
+      if (!project) return;
+
+      const titleInput = document.getElementById('current-project-title-input');
+      const idBadge = document.getElementById('current-project-id-badge');
+      titleInput.value = project.name;
+      idBadge.textContent = `ID: ${project.id}`;
+
+      renderTTSBlocks();
+    }
+
+    function renderTTSBlocks() {
+      const project = getCurrentProject();
+      const container = document.getElementById('tts-blocks-container');
+      container.innerHTML = '';
+
+      if (!project.blocks || project.blocks.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900">
+            <p class="text-sm text-slate-500 dark:text-slate-400">TTSブロックがありません。「ブロック追加」を押して文章を読み上げましょう。</p>
+          </div>
+        `;
+        return;
+      }
+
+      project.blocks.forEach((block, index) => {
+        const blockEl = createTTSBlockElement(block, index, project.blocks.length);
+        container.appendChild(blockEl);
+      });
+    }
+
+    function createTTSBlockElement(block, index, totalBlocks) {
+      const card = document.createElement('div');
+      card.className = 'bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-all';
+      card.id = `block-${block.id}`;
+
+      // Build Voice selection options
+      let voiceOptionsHtml = '';
+      
+      // 1. Cloned Voices Group
+      if (appState.clonedVoices.length > 0) {
+        voiceOptionsHtml += '<optgroup label="【登録済みクローン音声】">';
+        appState.clonedVoices.forEach(cv => {
+          const selected = block.voiceType === 'cloned' && block.voiceId === cv.id ? 'selected' : '';
+          voiceOptionsHtml += `<option value="cloned:${cv.id}" ${selected}>クローン: ${escapeHtml(cv.name)} (${cv.id})</option>`;
+        });
+        voiceOptionsHtml += '</optgroup>';
+      }
+
+      // 2. Prebuilt Voices Group (Flash TTS)
+      voiceOptionsHtml += '<optgroup label="【Gemini 3.8 Flash TTS 標準ボイス】">';
+      PREBUILT_VOICES.forEach(pv => {
+        const selected = block.voiceType === 'prebuilt' && block.voiceId === pv.id && block.model === 'gemini-3.8-flash-tts' ? 'selected' : '';
+        voiceOptionsHtml += `<option value="prebuilt:gemini-3.8-flash-tts:${pv.id}" ${selected}>[Flash] ${pv.name}</option>`;
+      });
+      voiceOptionsHtml += '</optgroup>';
+
+      // 3. Prebuilt Voices Group (Flash-Lite TTS)
+      voiceOptionsHtml += '<optgroup label="【Gemini 3.8 Flash-Lite TTS 標準ボイス】">';
+      PREBUILT_VOICES.forEach(pv => {
+        const selected = block.voiceType === 'prebuilt' && block.voiceId === pv.id && block.model === 'gemini-3.8-flash-lite-tts' ? 'selected' : '';
+        voiceOptionsHtml += `<option value="prebuilt:gemini-3.8-flash-lite-tts:${pv.id}" ${selected}>[Flash-Lite] ${pv.name}</option>`;
+      });
+      voiceOptionsHtml += '</optgroup>';
+
+      card.innerHTML = `
+        <!-- Block Header: Voice Selector & Model Indicator -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-2.5 flex-1 min-w-[240px]">
+            <span class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0">
+              #${index + 1}
+            </span>
+
+            <!-- Voice Selection Dropdown -->
+            <div class="flex-1 max-w-md">
+              <label class="sr-only">使用するボイス選択</label>
+              <select class="block-voice-select w-full text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                ${voiceOptionsHtml}
+              </select>
+            </div>
+
+            <!-- Model Badge -->
+            <span class="text-[11px] px-2 py-0.5 rounded-full font-medium ${block.model === 'gemini-3.8-flash-lite-tts' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800'}">
+              ${block.model === 'gemini-3.8-flash-lite-tts' ? '3.8 Flash-Lite' : '3.8 Flash'}
+            </span>
+          </div>
+
+          <!-- Block Actions (Duplicate & Delete) -->
+          <div class="flex items-center gap-1 text-slate-400">
+            <button class="btn-duplicate-block p-1.5 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="ブロックを複製">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+            </button>
+            <button class="btn-delete-block p-1.5 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="ブロックを削除">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. Text Input: 読み上げる文章 -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-bold text-slate-700 dark:text-slate-300">
+              読み上げる文章
+            </label>
+            <!-- Vocal Tag Quick Insert Chips -->
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="text-[10px] text-slate-400 mr-1">タグ挿入:</span>
+              ${VOCAL_TAGS.map(t => `<button type="button" class="btn-insert-tag text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors" data-tag="${t.tag}">${t.label}</button>`).join('')}
+            </div>
+          </div>
+          <textarea class="block-text-input w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all placeholder:text-slate-400" rows="3" placeholder="読み上げるテキストを入力してください。インラインタグ <short pause>, <laugh> も利用可能です。">${escapeHtml(block.text || '')}</textarea>
+        </div>
+
+        <!-- 2. Style Prompt Input: 読み上げ方のイメージ（プロンプト） -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <span>読み上げ方のイメージ（プロンプト）</span>
+              <span class="font-normal text-[11px] text-slate-400">speech_metadata.style</span>
+            </label>
+            <!-- Quick Preset Dropdown/Chips -->
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="text-[10px] text-slate-400 mr-1">プリセット:</span>
+              ${STYLE_PRESETS.slice(0, 3).map(p => `<button type="button" class="btn-preset-style text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors" data-preset="${p}">${p}</button>`).join('')}
+            </div>
+          </div>
+          <input type="text" class="block-style-input w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-100 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all placeholder:text-slate-400" placeholder="例: 明るく元気なナレーション、落ち着いたトーン、ささやくように" value="${escapeHtml(block.stylePrompt || '')}">
+        </div>
+
+        <!-- 3. Generation Button & Player -->
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <!-- Generate Audio Button -->
+          <button class="btn-generate-audio flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md shadow-purple-500/20 active:scale-95 transition-all shrink-0">
+            <svg class="w-4 h-4 icon-generate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="btn-generate-text">${block.isGenerating ? '生成中...' : '音声生成'}</span>
+          </button>
+
+          <!-- Player Container (shows if audioUrl exists) -->
+          <div class="block-player-container flex-1 flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 ${block.audioUrl ? '' : 'hidden'}">
+            <!-- Play/Pause Button -->
+            <button class="btn-play-block w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center shrink-0 transition-colors">
+              <svg class="icon-play-block w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <svg class="icon-pause-block w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+
+            <!-- Scrubber -->
+            <input type="range" min="0" max="100" value="0" step="0.1" class="block-seekbar flex-1">
+
+            <!-- Time Display -->
+            <span class="block-time-display font-mono text-xs text-slate-500 dark:text-slate-400 shrink-0">00:00 / 00:00</span>
+
+            <!-- Download Button -->
+            <a class="btn-download-block p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors" title="WAV音声をダウンロード" download="tts_audio_${block.id}.wav">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      `;
+
+      // Attach Event Listeners to this Block Element
+      const voiceSelect = card.querySelector('.block-voice-select');
+      voiceSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const parts = val.split(':');
+        if (parts[0] === 'cloned') {
+          block.voiceType = 'cloned';
+          block.voiceId = parts[1];
+        } else if (parts[0] === 'prebuilt') {
+          block.voiceType = 'prebuilt';
+          block.model = parts[1];
+          block.voiceId = parts[2];
+        }
+        saveProjectsToStorage();
+        renderTTSBlocks(); // re-render to update badges
+      });
+
+      const textInput = card.querySelector('.block-text-input');
+      textInput.addEventListener('input', (e) => {
+        block.text = e.target.value;
+        saveProjectsToStorage();
+      });
+
+      const styleInput = card.querySelector('.block-style-input');
+      styleInput.addEventListener('input', (e) => {
+        block.stylePrompt = e.target.value;
+        saveProjectsToStorage();
+      });
+
+      // Quick Tag Insert Buttons
+      card.querySelectorAll('.btn-insert-tag').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tag = btn.dataset.tag;
+          const cursorPos = textInput.selectionStart;
+          const textBefore = textInput.value.substring(0, cursorPos);
+          const textAfter = textInput.value.substring(textInput.selectionEnd);
+          textInput.value = textBefore + ' ' + tag + ' ' + textAfter;
+          block.text = textInput.value;
+          saveProjectsToStorage();
+          textInput.focus();
+        });
+      });
+
+      // Style Preset Buttons
+      card.querySelectorAll('.btn-preset-style').forEach(btn => {
+        btn.addEventListener('click', () => {
+          styleInput.value = btn.dataset.preset;
+          block.stylePrompt = styleInput.value;
+          saveProjectsToStorage();
+        });
+      });
+
+      // Duplicate & Delete Block Buttons
+      card.querySelector('.btn-duplicate-block').addEventListener('click', () => {
+        duplicateBlock(block.id);
+      });
+
+      card.querySelector('.btn-delete-block').addEventListener('click', () => {
+        deleteBlock(block.id);
+      });
+
+      // Audio Generation Trigger
+      const generateBtn = card.querySelector('.btn-generate-audio');
+      generateBtn.addEventListener('click', () => {
+        generateTTSForBlock(block, card);
+      });
+
+      // Audio Player Controller for Block
+      initBlockAudioPlayer(card, block);
+
+      return card;
+    }
+
+    function initBlockAudioPlayer(card, block) {
+      const playerContainer = card.querySelector('.block-player-container');
+      const playBtn = card.querySelector('.btn-play-block');
+      const playIcon = card.querySelector('.icon-play-block');
+      const pauseIcon = card.querySelector('.icon-pause-block');
+      const seekbar = card.querySelector('.block-seekbar');
+      const timeDisplay = card.querySelector('.block-time-display');
+      const downloadBtn = card.querySelector('.btn-download-block');
+
+      if (!block.audioElement) {
+        block.audioElement = new Audio();
+      }
+      const audio = block.audioElement;
+
+      if (block.audioUrl) {
+        audio.src = block.audioUrl;
+        downloadBtn.href = block.audioUrl;
+      }
+
+      playBtn.addEventListener('click', () => {
+        if (!audio.src) return;
+        if (audio.paused) {
+          // Pause any other playing audio in page
+          document.querySelectorAll('audio').forEach(a => a.pause());
+          audio.play();
+        } else {
+          audio.pause();
+        }
+      });
+
+      audio.addEventListener('play', () => {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+      });
+
+      audio.addEventListener('pause', () => {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        if (!isNaN(audio.duration) && audio.duration > 0) {
+          seekbar.value = (audio.currentTime / audio.duration) * 100;
+          timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        }
+      });
+
+      audio.addEventListener('loadedmetadata', () => {
+        timeDisplay.textContent = `00:00 / ${formatTime(audio.duration)}`;
+      });
+
+      audio.addEventListener('ended', () => {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        seekbar.value = 0;
+      });
+
+      seekbar.addEventListener('input', () => {
+        if (!isNaN(audio.duration)) {
+          audio.currentTime = (seekbar.value / 100) * audio.duration;
+        }
+      });
+    }
+
+    // --- Block Manipulation ---
+    function addBlock() {
+      const project = getCurrentProject();
+      const newBlock = {
+        id: generateUniqueId('blk'),
+        model: 'gemini-3.8-flash-tts',
+        voiceType: 'prebuilt',
+        voiceId: 'Puck',
+        text: '',
+        stylePrompt: '',
+        audioUrl: null,
+        isGenerating: false
+      };
+      project.blocks.push(newBlock);
+      saveProjectsToStorage();
+      renderTTSBlocks();
+      
+      // Scroll to new block
+      setTimeout(() => {
+        const el = document.getElementById(`block-${newBlock.id}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
+
+    function duplicateBlock(blockId) {
+      const project = getCurrentProject();
+      const idx = project.blocks.findIndex(b => b.id === blockId);
+      if (idx !== -1) {
+        const source = project.blocks[idx];
+        const copy = JSON.parse(JSON.stringify(source));
+        copy.id = generateUniqueId('blk');
+        copy.audioUrl = null;
+        project.blocks.splice(idx + 1, 0, copy);
+        saveProjectsToStorage();
+        renderTTSBlocks();
+      }
+    }
+
+    function deleteBlock(blockId) {
+      const project = getCurrentProject();
+      if (project.blocks.length <= 1) {
+        showToast('最低1つのブロックが必要です', 'info');
+        return;
+      }
+      project.blocks = project.blocks.filter(b => b.id !== blockId);
+      saveProjectsToStorage();
+      renderTTSBlocks();
+    }
+
+    // --- Project Operations ---
+    function createNewProject() {
+      const newProject = {
+        id: generateUniqueId('proj'),
+        name: `プロジェクト ${appState.projects.length + 1}`,
+        createdAt: new Date().toISOString(),
+        blocks: [
+          {
+            id: generateUniqueId('blk'),
+            model: 'gemini-3.8-flash-tts',
+            voiceType: 'prebuilt',
+            voiceId: 'Puck',
+            text: '',
+            stylePrompt: '',
+            audioUrl: null,
+            isGenerating: false
+          }
+        ]
+      };
+      appState.projects.push(newProject);
+      appState.currentProjectId = newProject.id;
+      saveProjectsToStorage();
+      renderSidebarProjects();
+      renderCurrentProjectView();
+      showToast('新規プロジェクトを作成しました', 'success');
+    }
+
+    function switchProject(projectId) {
+      appState.currentProjectId = projectId;
+      saveProjectsToStorage();
+      renderSidebarProjects();
+      renderCurrentProjectView();
+    }
+
+    function deleteProject(projectId) {
+      if (appState.projects.length <= 1) {
+        showToast('これ以上プロジェクトを削除できません', 'info');
+        return;
+      }
+      if (!confirm('このプロジェクトを削除しますか？')) return;
+
+      appState.projects = appState.projects.filter(p => p.id !== projectId);
+      if (appState.currentProjectId === projectId) {
+        appState.currentProjectId = appState.projects[0].id;
+      }
+      saveProjectsToStorage();
+      renderSidebarProjects();
+      renderCurrentProjectView();
+      showToast('プロジェクトを削除しました', 'info');
+    }
+
+    function deleteClonedVoice(voiceId) {
+      if (!confirm('このクローン音声を削除しますか？')) return;
+      appState.clonedVoices = appState.clonedVoices.filter(v => v.id !== voiceId);
+      saveClonedVoicesToStorage();
+      renderSidebarClonedVoices();
+      renderTTSBlocks(); // re-render voice dropdowns
+      showToast('クローン音声を削除しました', 'info');
+    }
+
+    // --- Gemini 3.8 Flash TTS Generation API Call ---
+    async function generateTTSForBlock(block, cardEl) {
+      if (!appState.apiKey) {
+        openApiKeyModal();
+        showToast('Gemini APIキーを設定してください', 'error');
+        return;
+      }
+      if (!block.text || block.text.trim().length === 0) {
+        showToast('読み上げる文章を入力してください', 'info');
+        return;
+      }
+
+      const generateBtn = cardEl.querySelector('.btn-generate-audio');
+      const generateText = cardEl.querySelector('.btn-generate-text');
+      const playerContainer = cardEl.querySelector('.block-player-container');
+      const downloadBtn = cardEl.querySelector('.btn-download-block');
+
+      block.isGenerating = true;
+      generateBtn.disabled = true;
+      generateText.textContent = '生成中...';
+
+      try {
+        const model = block.model || 'gemini-3.8-flash-tts';
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(appState.apiKey)}`;
+
+        // Build Voice Config
+        let voiceConfig = {};
+        if (block.voiceType === 'cloned') {
+          voiceConfig = { voice: block.voiceId };
+        } else {
+          voiceConfig = {
+            prebuiltVoiceConfig: {
+              voiceName: block.voiceId || 'Puck'
+            }
+          };
+        }
+
+        // Build Parts with Speech Metadata for style control
+        const partObj = { text: block.text };
+        if (block.stylePrompt && block.stylePrompt.trim().length > 0) {
+          partObj.speech_metadata = {
+            style: block.stylePrompt.trim()
+          };
+        }
+
+        const requestBody = {
+          contents: [
+            {
+              role: 'user',
+              parts: [partObj]
+            }
+          ],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: voiceConfig
+            }
+          }
+        };
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!res.ok) {
+          const errorJson = await res.json().catch(() => ({}));
+          throw new Error(errorJson.error?.message || `API Error: HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        // Extract Audio Base64 from response candidates
+        const candidate = data.candidates?.[0];
+        const part = candidate?.content?.parts?.find(p => p.inlineData || p.inline_data);
+        const audioBase64 = part?.inlineData?.data || part?.inline_data?.data;
+        const mimeType = part?.inlineData?.mimeType || part?.inline_data?.mime_type || 'audio/wav';
+
+        if (!audioBase64) {
+          throw new Error('APIから音声データが返却されませんでした。');
+        }
+
+        // Convert Base64 to Blob URL
+        const byteCharacters = atob(audioBase64);
+        const byteNumbers = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const audioBlob = new Blob([byteNumbers], { type: mimeType });
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        block.audioUrl = audioUrl;
+        saveProjectsToStorage();
+
+        // Update player UI
+        if (!block.audioElement) {
+          block.audioElement = new Audio();
+        }
+        block.audioElement.src = audioUrl;
+        downloadBtn.href = audioUrl;
+        playerContainer.classList.remove('hidden');
+
+        showToast('音声合成が完了しました！', 'success');
+      } catch (err) {
+        console.error('TTS Generation Error:', err);
+        showToast(`音声生成失敗: ${err.message}`, 'error');
+      } finally {
+        block.isGenerating = false;
+        generateBtn.disabled = false;
+        generateText.textContent = '音声生成';
+      }
+    }
+
+    // --- Voice Replication Modal Flow ---
+    function openVoiceCloneModal() {
+      // 1. Generate unique project ID as specified
+      const autoProjectId = generateUniqueId('proj');
+      appState.cloneModal.projectId = autoProjectId;
+      
+      // Save/link unique project in app
+      document.getElementById('clone-project-id-display').textContent = autoProjectId;
+
+      // Reset transient state
+      resetCloneModalSlot('training');
+      resetCloneModalSlot('consent');
+      document.getElementById('clone-voice-name').value = '';
+      document.getElementById('clone-api-status').classList.add('hidden');
+
+      updateCloneSubmitButtonState();
+
+      // Show modal
+      const modal = document.getElementById('modal-voice-clone');
+      modal.classList.remove('hidden');
+    }
+
+    function closeVoiceCloneModal() {
+      // Stop any running media recorder
+      stopActiveRecording();
+      // Pause any running audios
+      if (appState.cloneModal.training.audioEl) appState.cloneModal.training.audioEl.pause();
+      if (appState.cloneModal.consent.audioEl) appState.cloneModal.consent.audioEl.pause();
+
+      document.getElementById('modal-voice-clone').classList.add('hidden');
+    }
+
+    function resetCloneModalSlot(slot) {
+      const slotData = appState.cloneModal[slot];
+      if (slotData.audioEl) {
+        slotData.audioEl.pause();
+        slotData.audioEl = null;
+      }
+      slotData.blob = null;
+      slotData.wavBuffer = null;
+      slotData.base64 = null;
+      slotData.audioUrl = null;
+      slotData.isPlaying = false;
+
+      // Reset UI elements
+      document.getElementById(`status-badge-${slot}`).className = 'text-xs px-2.5 py-0.5 rounded-full font-medium bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+      document.getElementById(`status-badge-${slot}`).textContent = '未設定';
+      
+      document.getElementById(`player-container-${slot}`).classList.add('hidden');
+      document.getElementById(`rec-active-${slot}`).classList.add('hidden');
+
+      // Enable recording & upload buttons and remove disabled styling
+      setSlotButtonsDisabledState(slot, false);
+
+      updateCloneSubmitButtonState();
+    }
+
+    /**
+     * Controls disabled button appearance & 1-second tooltip flag
+     * Disabled buttons maintain contrast-safe readable gray
+     */
+    function setSlotButtonsDisabledState(slot, isDisabled) {
+      const wrappers = document.querySelectorAll(`.tooltip-wrapper[data-slot="${slot}"]`);
+      wrappers.forEach(w => {
+        w.setAttribute('data-is-disabled', isDisabled ? 'true' : 'false');
+      });
+
+      const recBtn = document.getElementById(`btn-rec-${slot}`);
+      const uploadLabel = document.getElementById(`btn-upload-${slot}-label`);
+      const uploadInput = document.getElementById(`file-upload-${slot}`);
+
+      if (isDisabled) {
+        recBtn.disabled = true;
+        uploadInput.disabled = true;
+        // Contrast-safe gray styling (WCAG AA compliant)
+        recBtn.className = 'rec-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 cursor-not-allowed opacity-80';
+        uploadLabel.className = 'upload-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 cursor-not-allowed opacity-80';
+      } else {
+        recBtn.disabled = false;
+        uploadInput.disabled = false;
+        recBtn.className = 'rec-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm';
+        uploadLabel.className = 'upload-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm cursor-pointer';
+      }
+    }
+
+    function confirmSlotAudio(slot, wavBlob, wavBuffer, base64, duration) {
+      const slotData = appState.cloneModal[slot];
+      slotData.blob = wavBlob;
+      slotData.wavBuffer = wavBuffer;
+      slotData.base64 = base64;
+      slotData.audioUrl = URL.createObjectURL(wavBlob);
+
+      // Status badge
+      const badge = document.getElementById(`status-badge-${slot}`);
+      badge.className = 'text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
+      badge.textContent = `完了 (${formatTime(duration)})`;
+
+      // Disable buttons
+      setSlotButtonsDisabledState(slot, true);
+
+      // Show player
+      const playerContainer = document.getElementById(`player-container-${slot}`);
+      playerContainer.classList.remove('hidden');
+
+      // Initialize audio player for this slot
+      initCloneSlotPlayer(slot);
+
+      updateCloneSubmitButtonState();
+    }
+
+    function initCloneSlotPlayer(slot) {
+      const slotData = appState.cloneModal[slot];
+      if (!slotData.audioEl) {
+        slotData.audioEl = new Audio();
+      }
+      const audio = slotData.audioEl;
+      audio.src = slotData.audioUrl;
+
+      const playBtn = document.getElementById(`btn-play-${slot}`);
+      const playIcon = document.getElementById(`play-icon-${slot}`);
+      const pauseIcon = document.getElementById(`pause-icon-${slot}`);
+      const seekbar = document.getElementById(`seekbar-${slot}`);
+      const timeDisplay = document.getElementById(`time-display-${slot}`);
+
+      playBtn.onclick = () => {
+        if (audio.paused) {
+          audio.play();
+        } else {
+          audio.pause();
+        }
+      };
+
+      audio.onplay = () => {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+      };
+
+      audio.onpause = () => {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+      };
+
+      audio.ontimeupdate = () => {
+        if (!isNaN(audio.duration) && audio.duration > 0) {
+          seekbar.value = (audio.currentTime / audio.duration) * 100;
+          timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+        }
+      };
+
+      audio.onloadedmetadata = () => {
+        timeDisplay.textContent = `00:00 / ${formatTime(audio.duration)}`;
+      };
+
+      audio.onended = () => {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        seekbar.value = 0;
+      };
+
+      seekbar.oninput = () => {
+        if (!isNaN(audio.duration)) {
+          audio.currentTime = (seekbar.value / 100) * audio.duration;
+        }
+      };
+
+      // 削除ボタン
+      const deleteBtn = document.getElementById(`btn-delete-${slot}`);
+      deleteBtn.onclick = () => {
+        resetCloneModalSlot(slot);
+        showToast('音声を削除しました。再録音またはファイル選択が可能です。', 'info');
+      };
+    }
+
+    function updateCloneSubmitButtonState() {
+      const btn = document.getElementById('btn-submit-voice-clone');
+      const hint = document.getElementById('clone-validation-hint');
+      const voiceName = document.getElementById('clone-voice-name').value.trim();
+
+      const hasTraining = !!appState.cloneModal.training.base64;
+      const hasConsent = !!appState.cloneModal.consent.base64;
+
+      if (hasTraining && hasConsent && voiceName.length > 0) {
+        btn.disabled = false;
+        btn.className = 'px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 shadow-md shadow-indigo-500/25 active:scale-95 transition-all flex items-center gap-2 cursor-pointer';
+        hint.textContent = 'すべての準備が完了しました。「音声合成開始」を押してください。';
+        hint.className = 'text-xs text-emerald-600 dark:text-emerald-400 font-medium';
+      } else {
+        btn.disabled = true;
+        btn.className = 'px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 cursor-not-allowed transition-all flex items-center gap-2';
+        
+        let missing = [];
+        if (!voiceName) missing.push('音声名の入力');
+        if (!hasTraining) missing.push('学習用音声');
+        if (!hasConsent) missing.push('認証用音声');
+        hint.textContent = `未完了: ${missing.join('、')}`;
+        hint.className = 'text-xs text-slate-500 dark:text-slate-400';
+      }
+    }
+
+    // --- Recording Logic with 24kHz LINEAR16 Conversion ---
+    async function startRecording(slot) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        appState.cloneModal.activeRecordingSlot = slot;
+        appState.cloneModal.recordingStartTime = Date.now();
+
+        const mediaRecorder = new MediaRecorder(stream);
+        appState.cloneModal.mediaRecorder = mediaRecorder;
+
+        const chunks = [];
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+          clearInterval(appState.cloneModal.recordingTimerInterval);
+
+          document.getElementById(`rec-active-${slot}`).classList.add('hidden');
+
+          const rawBlob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+          showToast('24kHz LINEAR16 WAVに変換中...', 'info');
+
+          try {
+            const { wavBlob, wavBuffer, base64, duration } = await convertAudioTo24kWav(rawBlob);
+            confirmSlotAudio(slot, wavBlob, wavBuffer, base64, duration);
+            showToast('録音データの変換と登録が完了しました！', 'success');
+          } catch (convErr) {
+            console.error('Audio conversion error:', convErr);
+            showToast(`音声変換エラー: ${convErr.message}`, 'error');
+            resetCloneModalSlot(slot);
+          }
+        };
+
+        mediaRecorder.start();
+
+        // UI active indicator
+        document.getElementById(`rec-active-${slot}`).classList.remove('hidden');
+        const timerEl = document.getElementById(`rec-timer-${slot}`);
+        timerEl.textContent = '00:00';
+
+        appState.cloneModal.recordingTimerInterval = setInterval(() => {
+          const elapsed = (Date.now() - appState.cloneModal.recordingStartTime) / 1000;
+          timerEl.textContent = formatTime(elapsed);
+        }, 500);
+
+      } catch (err) {
+        console.error('Microphone permission or error:', err);
+        showToast(`マイク録音エラー: ${err.message}`, 'error');
+      }
+    }
+
+    function stopActiveRecording() {
+      if (appState.cloneModal.mediaRecorder && appState.cloneModal.mediaRecorder.state !== 'inactive') {
+        appState.cloneModal.mediaRecorder.stop();
+      }
+    }
+
+    // --- File Upload Processing ---
+    async function handleFileUpload(slot, file) {
+      if (!file) return;
+      showToast(`${file.name} を24kHz LINEAR16 WAVに変換中...`, 'info');
+      try {
+        const { wavBlob, wavBuffer, base64, duration } = await convertAudioTo24kWav(file);
+        confirmSlotAudio(slot, wavBlob, wavBuffer, base64, duration);
+        showToast('ファイルのアップロードと変換が完了しました！', 'success');
+      } catch (err) {
+        console.error('File processing error:', err);
+        showToast(`ファイル変換エラー: ${err.message}`, 'error');
+        resetCloneModalSlot(slot);
+      }
+    }
+
+    // --- Submit Voice Replication to Gemini API ---
+    async function submitVoiceClone() {
+      if (!appState.apiKey) {
+        openApiKeyModal();
+        showToast('Gemini APIキーを設定してください', 'error');
+        return;
+      }
+
+      const voiceName = document.getElementById('clone-voice-name').value.trim();
+      const trainingData = appState.cloneModal.training.base64;
+      const consentData = appState.cloneModal.consent.base64;
+      const autoProjId = appState.cloneModal.projectId;
+
+      if (!voiceName || !trainingData || !consentData) {
+        showToast('すべての必須項目を完了してください', 'info');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btn-submit-voice-clone');
+      const submitBtnText = document.getElementById('btn-submit-clone-text');
+      const statusBox = document.getElementById('clone-api-status');
+
+      submitBtn.disabled = true;
+      submitBtnText.textContent = 'Voice Replication 登録中...';
+      statusBox.className = 'p-3 rounded-xl text-xs bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-2';
+      statusBox.innerHTML = `
+        <svg class="w-4 h-4 animate-spin text-purple-600" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>Gemini API Voice Replication エンドポイントに登録リクエスト送信中...</span>
+      `;
+      statusBox.classList.remove('hidden');
+
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/voices?key=${encodeURIComponent(appState.apiKey)}`;
+        
+        const payload = {
+          store: true,
+          voice: {
+            type: "replicated",
+            display_name: voiceName,
+            replicated: {
+              source_audio: {
+                mime_type: "audio/wav",
+                data: trainingData
+              },
+              consent_audio: {
+                mime_type: "audio/wav",
+                data: consentData
+              }
+            }
+          }
+        };
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const resData = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          // If API returns error (e.g. invalid key or consent verification fail)
+          throw new Error(resData.error?.message || `API Error: HTTP ${res.status}`);
+        }
+
+        // Successfully cloned! Extract generated Voice ID
+        const voiceId = resData.voiceId || resData.name?.replace('voices/', '') || resData.voice?.voice_id || resData.voice?.name || `voice_${generateUniqueId('rep')}`;
+
+        // Save cloned voice record linked with Project & API Key in localStorage
+        const newVoiceRecord = {
+          id: voiceId,
+          name: voiceName,
+          projectId: autoProjId,
+          createdAt: new Date().toISOString()
+        };
+        appState.clonedVoices.push(newVoiceRecord);
+        saveClonedVoicesToStorage();
+
+        // Also add project to projects list if not exists
+        let targetProj = appState.projects.find(p => p.id === autoProjId);
+        if (!targetProj) {
+          targetProj = {
+            id: autoProjId,
+            name: `${voiceName} プロジェクト`,
+            createdAt: new Date().toISOString(),
+            blocks: [
+              {
+                id: generateUniqueId('blk'),
+                model: 'gemini-3.8-flash-tts',
+                voiceType: 'cloned',
+                voiceId: voiceId,
+                text: '声のクローンが完了しました！この音声で文章を生成できます。',
+                stylePrompt: '自然で滑らかな語り口',
+                audioUrl: null,
+                isGenerating: false
+              }
+            ]
+          };
+          appState.projects.push(targetProj);
+          appState.currentProjectId = autoProjId;
+          saveProjectsToStorage();
+        }
+
+        renderSidebarProjects();
+        renderSidebarClonedVoices();
+        renderCurrentProjectView();
+
+        statusBox.className = 'p-3 rounded-xl text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
+        statusBox.innerHTML = `
+          <strong>登録完了！</strong> ボイスID: <code class="font-mono font-bold">${voiceId}</code> が発行され保存されました。
+        `;
+
+        showToast(`クローン音声「${voiceName}」を正常に登録しました！`, 'success');
+
+        setTimeout(() => {
+          closeVoiceCloneModal();
+        }, 1500);
+
+      } catch (err) {
+        console.error('Voice Replication API Error:', err);
+        statusBox.className = 'p-3 rounded-xl text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 space-y-2';
+        statusBox.innerHTML = `
+          <div><strong>登録エラー:</strong> ${escapeHtml(err.message)}</div>
+          <div class="text-[11px] text-rose-600 dark:text-rose-400">
+            ヒント: 認証用音声で指定の同意文が明瞭に発音されているか、またGemini API KeyにVoice Replicationの利用権限があるかご確認ください。
+          </div>
+          <div class="pt-1">
+            <button id="btn-save-offline-voice" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors">
+              UI検証用にローカルボイスとして保存して続行
+            </button>
+          </div>
+        `;
+
+        const fallbackBtn = document.getElementById('btn-save-offline-voice');
+        if (fallbackBtn) {
+          fallbackBtn.onclick = () => {
+            const fallbackVoiceId = `voice_sim_${generateUniqueId('mock')}`;
+            const fallbackRecord = {
+              id: fallbackVoiceId,
+              name: `${voiceName} (テスト)`,
+              projectId: autoProjId,
+              createdAt: new Date().toISOString()
+            };
+            appState.clonedVoices.push(fallbackRecord);
+            saveClonedVoicesToStorage();
+            renderSidebarClonedVoices();
+            renderTTSBlocks();
+            showToast(`テスト用ボイスID: ${fallbackVoiceId} を保存しました`, 'success');
+            closeVoiceCloneModal();
+          };
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtnText.textContent = '音声合成開始（クローン開始）';
+      }
+    }
+
+    // --- API Key Modal Operations ---
+    function openApiKeyModal() {
+      const input = document.getElementById('input-api-key');
+      input.value = appState.apiKey || '';
+      document.getElementById('modal-api-key').classList.remove('hidden');
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('modal-api-key').classList.add('hidden');
+    }
+
+    function saveApiKey() {
+      const input = document.getElementById('input-api-key');
+      const val = input.value.trim();
+      if (!val) {
+        showToast('APIキーを入力してください', 'info');
+        return;
+      }
+      appState.apiKey = val;
+      localStorage.setItem(STORAGE_KEY_API_KEY, val);
+      updateApiKeyStatusUI();
+      closeApiKeyModal();
+      showToast('APIキーを保存しました', 'success');
+    }
+
+    // --- HTML Escaping ---
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // --- Theme Toggle ---
+    function initTheme() {
+      const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
+      const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      setTheme(isDark);
+
+      document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+        const isCurrentDark = document.documentElement.classList.contains('dark');
+        setTheme(!isCurrentDark);
+      });
+    }
+
+    function setTheme(isDark) {
+      const iconLight = document.getElementById('theme-icon-light');
+      const iconDark = document.getElementById('theme-icon-dark');
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        iconLight.classList.add('hidden');
+        iconDark.classList.remove('hidden');
+        localStorage.setItem(STORAGE_KEY_THEME, 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        iconLight.classList.remove('hidden');
+        iconDark.classList.add('hidden');
+        localStorage.setItem(STORAGE_KEY_THEME, 'light');
+      }
+    }
+
+    // --- Initialization & Event Binding ---
+    function initApp() {
+      initTheme();
+      loadStateFromStorage();
+      updateApiKeyStatusUI();
+      renderSidebarProjects();
+      renderSidebarClonedVoices();
+      renderCurrentProjectView();
+      initTooltipListeners();
+
+      // Check if API key is missing on first launch -> auto open modal
+      if (!appState.apiKey) {
+        setTimeout(openApiKeyModal, 500);
+      }
+
+      // Sidebar Toggle
+      const sidebar = document.getElementById('sidebar');
+      document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
+        sidebar.classList.toggle('-ml-72');
+        sidebar.classList.toggle('sm:-ml-80');
+      });
+
+      // API Key Buttons
+      document.getElementById('btn-api-key-status').addEventListener('click', openApiKeyModal);
+      document.getElementById('btn-sidebar-settings').addEventListener('click', openApiKeyModal);
+      document.getElementById('btn-save-api-key').addEventListener('click', saveApiKey);
+      document.getElementById('btn-toggle-key-visibility').addEventListener('click', () => {
+        const input = document.getElementById('input-api-key');
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+
+      // Project Name Edit
+      const projectTitleInput = document.getElementById('current-project-title-input');
+      projectTitleInput.addEventListener('change', () => {
+        const proj = getCurrentProject();
+        if (proj) {
+          proj.name = projectTitleInput.value.trim() || '名称未設定';
+          saveProjectsToStorage();
+          renderSidebarProjects();
+        }
+      });
+
+      // New Project Button
+      document.getElementById('btn-create-project').addEventListener('click', createNewProject);
+
+      // Add Block Buttons
+      document.getElementById('btn-add-block-header').addEventListener('click', addBlock);
+      document.getElementById('btn-add-block-bottom').addEventListener('click', addBlock);
+
+      // Batch Generate All Blocks
+      document.getElementById('btn-generate-all-blocks').addEventListener('click', async () => {
+        const project = getCurrentProject();
+        if (!project.blocks || project.blocks.length === 0) return;
+        showToast('全ブロックの生成を開始します...', 'info');
+        for (const block of project.blocks) {
+          const cardEl = document.getElementById(`block-${block.id}`);
+          if (cardEl && (!block.audioUrl || block.isGenerating === false)) {
+            await generateTTSForBlock(block, cardEl);
+          }
+        }
+        showToast('全ブロックの生成処理が完了しました！', 'success');
+      });
+
+      // Voice Replication Modal Triggers
+      document.getElementById('btn-open-voice-clone').addEventListener('click', openVoiceCloneModal);
+      document.getElementById('btn-close-voice-clone').addEventListener('click', closeVoiceCloneModal);
+
+      // Voice Name Input validation
+      document.getElementById('clone-voice-name').addEventListener('input', updateCloneSubmitButtonState);
+
+      // Recording & Stop Triggers
+      document.getElementById('btn-rec-training').addEventListener('click', () => startRecording('training'));
+      document.getElementById('btn-stop-rec-training').addEventListener('click', stopActiveRecording);
+
+      document.getElementById('btn-rec-consent').addEventListener('click', () => startRecording('consent'));
+      document.getElementById('btn-stop-rec-consent').addEventListener('click', stopActiveRecording);
+
+      // File Upload Triggers
+      document.getElementById('file-upload-training').addEventListener('change', (e) => {
+        handleFileUpload('training', e.target.files[0]);
+      });
+      document.getElementById('file-upload-consent').addEventListener('change', (e) => {
+        handleFileUpload('consent', e.target.files[0]);
+      });
+
+      // Submit Voice Clone Trigger
+      document.getElementById('btn-submit-voice-clone').addEventListener('click', submitVoiceClone);
+    }
+
+    // Launch application on DOM ready
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
